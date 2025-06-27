@@ -221,9 +221,20 @@ function generateCalendarEvents() {
 // Update createEvent to use Luxon for reminder calculation
 function createEvent(row, fromDate, toDate, timeSettings, reminderSettings) {
     const subject = `${row.activity} - ${row.version}`.trim();
-    const location = (row.area || '').replace(/_/g, ' ');
+    
+    // Set location based on activity type
+    let location;
+    if (row.activity === 'Drive Unit' || row.activity === 'Unload Unit') {
+        location = (row.toLoc || '').replace(/_/g, ' ');
+    } else {
+        location = (row.area || '').replace(/_/g, ' ');
+    }
+    
     let description = `${row.activity} ${row.version}`;
-    if (row.activity === 'Prep Only' || row.activity === 'Prep Trip') {
+    
+    if (row.activity === 'Travel') {
+        description = `Travel from ${row.fromLoc || 'Unknown'} to ${row.toLoc || 'Unknown'}`;
+    } else if (row.activity === 'Prep Only' || row.activity === 'Prep Trip') {
         description += `\nGuests: ${row.bkd}`;
         description += `\nUnit: ${row.unit}`;
         if (row.departureAttributes) {
@@ -284,7 +295,15 @@ function createEvent(row, fromDate, toDate, timeSettings, reminderSettings) {
         toLoc: row.toLoc
     };
     if (reminderSettings.enabled && reminderSettings.activityMap[row.activity]) {
-        const reminderDate = eventStart.minus({ hours: reminderSettings.hours });
+        let reminderDate;
+        if (allDay) {
+            // For all-day events, calculate reminder based on 8:00 AM start time
+            const eventStartAt8AM = eventStart.set({ hour: 8, minute: 0, second: 0, millisecond: 0 });
+            reminderDate = eventStartAt8AM.minus({ hours: reminderSettings.hours });
+        } else {
+            // For timed events, use the actual start time
+            reminderDate = eventStart.minus({ hours: reminderSettings.hours });
+        }
         event.reminderDate = reminderDate;
     }
     return event;
@@ -501,13 +520,17 @@ function exportGoogleCalendar(events) {
 // Export Outlook Calendar ICS
 function exportOutlookCalendar(events) {
     const icsEvents = events.map(event => {
-        const startDateTime = event.allDay ? 
-            formatDate(event.fromDate) : 
-            formatDateTime(event.fromDate, event.startTime);
+        // Format datetime for ICS (local timezone)
+        let startDateTime, endDateTime;
         
-        const endDateTime = event.allDay ? 
-            formatDate(event.toDate) : 
-            formatDateTime(event.toDate, event.endTime);
+        if (event.allDay) {
+            startDateTime = formatDate(event.fromDate);
+            endDateTime = formatDate(event.toDate);
+        } else {
+            // Use local timezone formatting
+            startDateTime = formatDateTime(event.fromDate, event.startTime);
+            endDateTime = formatDateTime(event.toDate, event.endTime);
+        }
 
         let icsEvent = [
             'BEGIN:VEVENT',
