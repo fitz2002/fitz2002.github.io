@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work Schedule Calendar Exporter</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ics@2.44.0/ics.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Work Schedule Calendar Exporter</h1>
+            <p>Upload your Excel schedule and export to Google Calendar or Outlook</p>
+        </header>
+
+        <main>
+            <!-- File Upload Section -->
+            <section class="upload-section">
+                <h2>1. Upload Schedule File</h2>
+                <div class="file-upload">
+                    <input type="file" id="fileInput" accept=".xlsx,.xls" />
+                    <label for="fileInput" class="file-label">
+                        <span class="file-icon">📁</span>
+                        <span>Choose Excel file (.xlsx)</span>
+                    </label>
+                </div>
+                <div id="fileInfo" class="file-info hidden"></div>
+            </section>
+
+            <!-- Export Format Section -->
+            <section class="format-section">
+                <h2>2. Choose Export Format</h2>
+                <div class="format-options">
+                    <label class="format-option">
+                        <input type="radio" name="exportFormat" value="google" checked>
+                        <span class="radio-custom"></span>
+                        <span class="format-label">
+                            <strong>Google Calendar</strong>
+                            <small>Export as CSV file</small>
+                        </span>
+                    </label>
+                    <label class="format-option">
+                        <input type="radio" name="exportFormat" value="outlook">
+                        <span class="radio-custom"></span>
+                        <span class="format-label">
+                            <strong>Outlook Calendar</strong>
+                            <small>Export as ICS file</small>
+                        </span>
+                    </label>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section class="settings-section">
+                <h2>3. Configure Settings</h2>
+                
+                <!-- Reminder Settings -->
+                <div class="setting-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="enableReminders">
+                        <span class="checkbox-custom"></span>
+                        Enable reminders
+                    </label>
+                    <div id="reminderSettings" class="reminder-settings hidden">
+                        <label for="reminderTime">Reminder time (hours before event):</label>
+                        <input type="number" id="reminderTime" min="0.5" max="168" step="0.5" value="24">
+                    </div>
+                </div>
+
+                <!-- Time Settings -->
+                <div class="time-settings">
+                    <h3>Activity Time Settings</h3>
+                    <div class="time-grid">
+                        <div class="time-group">
+                            <label for="prepTripStart">Prep Trip Start Time:</label>
+                            <input type="time" id="prepTripStart" value="08:00">
+                        </div>
+                        <div class="time-group">
+                            <label for="prepTripEnd">Prep Trip End Time:</label>
+                            <input type="time" id="prepTripEnd" value="17:00">
+                        </div>
+                        <div class="time-group">
+                            <label for="breakdownStart">Breakdown Start Time:</label>
+                            <input type="time" id="breakdownStart" value="08:00">
+                        </div>
+                        <div class="time-group">
+                            <label for="breakdownEnd">Breakdown End Time:</label>
+                            <input type="time" id="breakdownEnd" value="17:00">
+                        </div>
+                        <div class="time-group">
+                            <label for="prepOnlyStart">Prep Only Start Time:</label>
+                            <input type="time" id="prepOnlyStart" value="09:00">
+                        </div>
+                        <div class="time-group">
+                            <label for="prepOnlyEnd">Prep Only End Time:</label>
+                            <input type="time" id="prepOnlyEnd" value="15:00">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timezone Settings -->
+                <div class="timezone-section setting-group">
+                    <label for="timezoneSelect">Timezone:</label>
+                    <select id="timezoneSelect"></select>
+                </div>
+            </section>
+
+            <!-- Preview Section -->
+            <section class="preview-section hidden" id="previewSection">
+                <h2>4. Preview Events</h2>
+                <div class="preview-controls">
+                    <button id="previewBtn" class="btn btn-secondary">Generate Preview</button>
+                    <span id="eventCount" class="event-count"></span>
+                </div>
+                <div id="previewTable" class="preview-table"></div>
+            </section>
+
+            <!-- Export Section -->
+            <section class="export-section">
+                <h2>5. Export Calendar</h2>
+                <button id="exportBtn" class="btn btn-primary" disabled>Export Calendar</button>
+                <div id="exportStatus" class="export-status"></div>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html> 

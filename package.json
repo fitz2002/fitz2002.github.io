@@ -1,0 +1,18 @@
+{
+  "name": "scheduler-plugin",
+  "version": "1.0.0",
+  "description": "A scheduling plugin for work schedules with Excel to Calendar export functionality",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "dev": "python -m http.server 8000"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5",
+    "ics": "^2.44.0"
+  },
+  "devDependencies": {},
+  "keywords": ["scheduler", "calendar", "excel", "plugin"],
+  "author": "",
+  "license": "MIT"
+} 
