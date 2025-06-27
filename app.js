@@ -1,6 +1,8 @@
 // Global variables
 let scheduleData = null;
 let processedEvents = [];
+// No global activityReminderCheckboxes; always get by ID when needed
+let activityReminderMap = {};
 
 // DOM elements
 const fileInput = document.getElementById('fileInput');
@@ -15,24 +17,12 @@ const eventCount = document.getElementById('eventCount');
 const exportBtn = document.getElementById('exportBtn');
 const exportStatus = document.getElementById('exportStatus');
 
-// Populate timezone dropdown
-const timezoneSelect = document.getElementById('timezoneSelect');
-const timezones = Intl.supportedValuesOf('timeZone');
-timezones.forEach(tz => {
-    const option = document.createElement('option');
-    option.value = tz;
-    option.textContent = tz;
-    timezoneSelect.appendChild(option);
-});
-// Set default to browser timezone
-timezoneSelect.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-function getSelectedTimezone() {
-    return timezoneSelect.value || 'UTC';
-}
-
 // Event listeners
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM fully loaded');
+    fileInput.addEventListener('change', function(e) {
+        console.log('File input changed', e.target.files);
+    });
     fileInput.addEventListener('change', handleFileUpload);
     enableReminders.addEventListener('change', toggleReminderSettings);
     previewBtn.addEventListener('click', generatePreview);
@@ -78,7 +68,10 @@ function handleFileUpload(event) {
             
             // Show preview section
             previewSection.classList.remove('hidden');
-            
+            // Always generate per-activity reminder checkboxes after file upload
+            showActivityReminderCheckboxes();
+            // Show/hide checkboxes based on reminder toggle
+            toggleReminderSettings();
         } catch (error) {
             console.error('Error parsing file:', error);
             showError('Error parsing the Excel file. Please ensure it\'s a valid .xlsx file.');
@@ -181,21 +174,20 @@ function parseScheduleData(headers, rows) {
     return parsedData;
 }
 
-// Update parseDate to use Luxon and timezone
+// Update parseDate to use Luxon without timezone
 function parseDate(dateVal) {
     if (!dateVal) return null;
-    const tz = getSelectedTimezone();
     if (typeof dateVal === 'number') {
         // Excel serial date to JS Date (local time, not UTC)
         const utc_days = dateVal - 25569;
         const utc_value = utc_days * 86400 * 1000;
         const date = new Date(utc_value);
-        // Use Luxon to get correct local date in selected timezone
+        // Use Luxon to get correct local date
         return luxon.DateTime.fromObject({
             year: date.getUTCFullYear(),
             month: date.getUTCMonth() + 1,
             day: date.getUTCDate()
-        }, { zone: tz });
+        });
     }
     // Otherwise, try to parse as mm/dd/yy
     const parts = dateVal.toString().split('/');
@@ -203,36 +195,27 @@ function parseDate(dateVal) {
     const month = parseInt(parts[0]);
     const day = parseInt(parts[1]);
     const year = parseInt(parts[2]) + 2000;
-    return luxon.DateTime.fromObject({ year, month, day }, { zone: tz });
+    return luxon.DateTime.fromObject({ year, month, day });
 }
 
 // Generate calendar events
 function generateCalendarEvents() {
     if (!scheduleData) return [];
-
-    const events = [];
+    
     const timeSettings = getTimeSettings();
     const reminderSettings = getReminderSettings();
-
-    scheduleData.forEach((row, index) => {
+    
+    return scheduleData.map(row => {
         const fromDate = parseDate(row.from);
         const toDate = parseDate(row.to);
-
-        if (!fromDate || !row.activity) {
-            console.log(`Event skipped at row ${row.rowIndex}: invalid fromDate (${row.from}) or missing activity (${row.activity})`);
-            return;
+        
+        if (!fromDate || !toDate) {
+            console.warn(`Skipping row ${row.rowIndex}: invalid dates`);
+            return null;
         }
-
-        const event = createEvent(row, fromDate, toDate, timeSettings, reminderSettings);
-        if (event) {
-            events.push(event);
-        } else {
-            console.log(`Event not created for row ${row.rowIndex}`);
-        }
-    });
-
-    console.log('Total events generated:', events.length);
-    return events;
+        
+        return createEvent(row, fromDate, toDate, timeSettings, reminderSettings);
+    }).filter(Boolean);
 }
 
 // Update createEvent to use Luxon for reminder calculation
@@ -241,7 +224,7 @@ function createEvent(row, fromDate, toDate, timeSettings, reminderSettings) {
     const location = (row.area || '').replace(/_/g, ' ');
     let description = `${row.activity} ${row.version}`;
     if (row.activity === 'Prep Only' || row.activity === 'Prep Trip') {
-        description += `\n${row.bkd} guests`;
+        description += `\nGuests: ${row.bkd}`;
         description += `\nUnit: ${row.unit}`;
         if (row.departureAttributes) {
             description += `\nNotes: ${row.departureAttributes}`;
@@ -300,7 +283,7 @@ function createEvent(row, fromDate, toDate, timeSettings, reminderSettings) {
         fromLoc: row.fromLoc,
         toLoc: row.toLoc
     };
-    if (reminderSettings.enabled) {
+    if (reminderSettings.enabled && reminderSettings.activityMap[row.activity]) {
         const reminderDate = eventStart.minus({ hours: reminderSettings.hours });
         event.reminderDate = reminderDate;
     }
@@ -323,16 +306,33 @@ function getTimeSettings() {
 function getReminderSettings() {
     return {
         enabled: enableReminders.checked,
-        hours: parseFloat(reminderTime.value) || 24
+        hours: parseFloat(reminderTime.value) || 24,
+        activityMap: { ...activityReminderMap }
     };
 }
 
 // Toggle reminder settings visibility
 function toggleReminderSettings() {
+    console.log('toggleReminderSettings called, enableReminders.checked:', enableReminders.checked);
+    const container = document.getElementById('activityReminderCheckboxes');
+    console.log('activityReminderCheckboxes container:', container);
+    console.log('scheduleData exists:', !!scheduleData);
+    
     if (enableReminders.checked) {
         reminderSettings.classList.remove('hidden');
+        // Only show activity checkboxes if we have schedule data (file uploaded)
+        if (container && scheduleData) {
+            console.log('Showing activity checkboxes');
+            container.style.display = 'flex';
+        } else {
+            console.log('Not showing checkboxes - container:', !!container, 'scheduleData:', !!scheduleData);
+        }
     } else {
         reminderSettings.classList.add('hidden');
+        if (container) {
+            console.log('Hiding activity checkboxes');
+            container.style.display = 'none';
+        }
     }
 }
 
@@ -588,4 +588,37 @@ function showError(message) {
 function showSuccess(message) {
     exportStatus.textContent = message;
     exportStatus.className = 'export-status success';
+}
+
+// Show per-activity reminder checkboxes after parsing
+function showActivityReminderCheckboxes() {
+    const container = document.getElementById('activityReminderCheckboxes');
+    if (!container) {
+        console.warn('activityReminderCheckboxes container is null');
+        return;
+    }
+    if (!scheduleData) return;
+    // Get unique activities
+    const uniqueActivities = Array.from(new Set(scheduleData.map(row => row.activity).filter(Boolean)));
+    // Preserve previous selections
+    const previousMap = { ...activityReminderMap };
+    container.innerHTML = '';
+    activityReminderMap = {};
+    uniqueActivities.forEach(activity => {
+        const label = document.createElement('label');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        // Preserve previous selection, default to true if not set
+        checkbox.checked = previousMap.hasOwnProperty(activity) ? previousMap[activity] : true;
+        checkbox.value = activity;
+        activityReminderMap[activity] = checkbox.checked;
+        checkbox.addEventListener('change', (e) => {
+            activityReminderMap[activity] = e.target.checked;
+        });
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(activity));
+        container.appendChild(label);
+    });
+    // Show if reminders are enabled, hide if disabled
+    container.style.display = enableReminders.checked ? 'flex' : 'none';
 } 
