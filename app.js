@@ -25,11 +25,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     fileInput.addEventListener('change', handleFileUpload);
     enableReminders.addEventListener('change', toggleReminderSettings);
+    document.getElementById('includePrePrep').addEventListener('change', togglePrePrepSettings);
     previewBtn.addEventListener('click', generatePreview);
     exportBtn.addEventListener('click', exportCalendar);
     
     // Initialize reminder settings visibility
     toggleReminderSettings();
+    togglePrePrepSettings();
 });
 
 // File upload handler
@@ -205,17 +207,41 @@ function generateCalendarEvents() {
     const timeSettings = getTimeSettings();
     const reminderSettings = getReminderSettings();
     
-    return scheduleData.map(row => {
+    const events = [];
+    
+    scheduleData.forEach(row => {
         const fromDate = parseDate(row.from);
         const toDate = parseDate(row.to);
         
         if (!fromDate || !toDate) {
             console.warn(`Skipping row ${row.rowIndex}: invalid dates`);
-            return null;
+            return;
         }
         
-        return createEvent(row, fromDate, toDate, timeSettings, reminderSettings);
-    }).filter(Boolean);
+        // Create the main event
+        const mainEvent = createEvent(row, fromDate, toDate, timeSettings, reminderSettings);
+        if (mainEvent) {
+            events.push(mainEvent);
+        }
+        
+        // Create Pre Prep event if enabled and this is a Prep Trip
+        if (timeSettings.includePrePrep && row.activity === 'Prep Trip') {
+            const prePrepDate = fromDate.minus({ days: 1 }); // Day before the Prep Trip
+            const prePrepEvent = createPrePrepEvent(row, prePrepDate, timeSettings, reminderSettings);
+            if (prePrepEvent) {
+                events.push(prePrepEvent);
+            }
+        }
+    });
+    
+    // Sort events by date (fromDate) to ensure chronological order
+    events.sort((a, b) => {
+        if (a.fromDate < b.fromDate) return -1;
+        if (a.fromDate > b.fromDate) return 1;
+        return 0;
+    });
+    
+    return events;
 }
 
 // Update createEvent to use Luxon for reminder calculation
@@ -256,6 +282,9 @@ function createEvent(row, fromDate, toDate, timeSettings, reminderSettings) {
             endTime = timeSettings.breakdownEnd;
             break;
         case 'Drive Unit':
+            allDay = true;
+            break;
+        case 'Travel':
             allDay = true;
             break;
         case 'Load Unit':
@@ -309,9 +338,64 @@ function createEvent(row, fromDate, toDate, timeSettings, reminderSettings) {
     return event;
 }
 
+// Create Pre Prep event
+function createPrePrepEvent(row, prePrepDate, timeSettings, reminderSettings) {
+    const subject = `Pre Prep - ${row.version}`.trim();
+    const location = (row.area || '').replace(/_/g, ' ');
+    let description = `Pre Prep ${row.version}`;
+    
+    if (row.activity === 'Prep Trip') {
+        description += `\nGuests: ${row.bkd}`;
+        description += `\nUnit: ${row.unit}`;
+        if (row.departureAttributes) {
+            description += `\nNotes: ${row.departureAttributes}`;
+        }
+    }
+    
+    const startTime = timeSettings.prePrepStart;
+    const endTime = timeSettings.prePrepEnd;
+    
+    // Use Luxon for event start/end
+    let eventStart = prePrepDate;
+    let eventEnd = prePrepDate;
+    
+    if (startTime) {
+        const [h, m] = startTime.split(':');
+        eventStart = eventStart.set({ hour: parseInt(h), minute: parseInt(m), second: 0, millisecond: 0 });
+    }
+    if (endTime) {
+        const [h, m] = endTime.split(':');
+        eventEnd = eventEnd.set({ hour: parseInt(h), minute: parseInt(m), second: 0, millisecond: 0 });
+    }
+    
+    const event = {
+        subject: subject,
+        description: description,
+        location: location,
+        fromDate: eventStart,
+        toDate: eventEnd,
+        startTime: startTime,
+        endTime: endTime,
+        allDay: false,
+        hasTravel: !!(row.fromLoc || row.toLoc),
+        fromLoc: row.fromLoc,
+        toLoc: row.toLoc
+    };
+    
+    if (reminderSettings.enabled && reminderSettings.activityMap['Pre Prep']) {
+        const reminderDate = eventStart.minus({ hours: reminderSettings.hours });
+        event.reminderDate = reminderDate;
+    }
+    
+    return event;
+}
+
 // Get time settings from form
 function getTimeSettings() {
     return {
+        includePrePrep: document.getElementById('includePrePrep').checked,
+        prePrepStart: document.getElementById('prePrepStart').value,
+        prePrepEnd: document.getElementById('prePrepEnd').value,
         prepTripStart: document.getElementById('prepTripStart').value,
         prepTripEnd: document.getElementById('prepTripEnd').value,
         breakdownStart: document.getElementById('breakdownStart').value,
@@ -627,6 +711,8 @@ function showActivityReminderCheckboxes() {
     const previousMap = { ...activityReminderMap };
     container.innerHTML = '';
     activityReminderMap = {};
+    
+    // Add regular activities
     uniqueActivities.forEach(activity => {
         const label = document.createElement('label');
         const checkbox = document.createElement('input');
@@ -642,6 +728,42 @@ function showActivityReminderCheckboxes() {
         label.appendChild(document.createTextNode(activity));
         container.appendChild(label);
     });
+    
+    // Add Pre Prep checkbox if enabled
+    const includePrePrep = document.getElementById('includePrePrep');
+    if (includePrePrep && includePrePrep.checked) {
+        const label = document.createElement('label');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        // Preserve previous selection, default to true if not set
+        checkbox.checked = previousMap.hasOwnProperty('Pre Prep') ? previousMap['Pre Prep'] : true;
+        checkbox.value = 'Pre Prep';
+        activityReminderMap['Pre Prep'] = checkbox.checked;
+        checkbox.addEventListener('change', (e) => {
+            activityReminderMap['Pre Prep'] = e.target.checked;
+        });
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode('Pre Prep'));
+        container.appendChild(label);
+    }
+    
     // Show if reminders are enabled, hide if disabled
     container.style.display = enableReminders.checked ? 'flex' : 'none';
+}
+
+// Toggle Pre Prep settings
+function togglePrePrepSettings() {
+    const includePrePrep = document.getElementById('includePrePrep');
+    const prePrepSettings = document.getElementById('prePrepSettings');
+    
+    if (includePrePrep.checked) {
+        prePrepSettings.classList.remove('hidden');
+    } else {
+        prePrepSettings.classList.add('hidden');
+    }
+    
+    // Refresh activity reminder checkboxes to include/exclude Pre Prep
+    if (scheduleData) {
+        showActivityReminderCheckboxes();
+    }
 } 

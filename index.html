@@ -84,6 +84,7 @@
                 <!-- Time Settings -->
                 <div class="time-settings">
                     <h3>Activity Time Settings</h3>
+                    
                     <div class="time-grid">
                         <div class="time-group">
                             <label for="prepTripStart">Prep Trip Start Time:</label>
@@ -108,6 +109,28 @@
                         <div class="time-group">
                             <label for="prepOnlyEnd">Prep Only End Time:</label>
                             <input type="time" id="prepOnlyEnd" value="15:00">
+                        </div>
+                    </div>
+                    
+                    <!-- Pre Prep Settings -->
+                    <div class="setting-group">
+                        <label class="checkbox-label">
+                            <br><br>
+                            <input type="checkbox" id="includePrePrep">
+                            <span class="checkbox-custom"></span>
+                            Include Pre Prep?
+                        </label>
+                        <div id="prePrepSettings" class="pre-prep-settings hidden">
+                            <div class="time-grid">
+                                <div class="time-group">
+                                    <label for="prePrepStart">Pre Prep Start Time:</label>
+                                    <input type="time" id="prePrepStart" value="09:00">
+                                </div>
+                                <div class="time-group">
+                                    <label for="prePrepEnd">Pre Prep End Time:</label>
+                                    <input type="time" id="prePrepEnd" value="17:00">
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

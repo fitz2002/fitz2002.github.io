@@ -257,9 +257,17 @@ section h2 {
 
 .reminder-settings {
     margin-top: 15px;
-    padding: 20px;
+    padding: 15px;
     background: #f8f9fa;
-    border-radius: 12px;
+    border-radius: 8px;
+    border-left: 4px solid #0098C3;
+}
+
+.pre-prep-settings {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
     border-left: 4px solid #0098C3;
 }
 
