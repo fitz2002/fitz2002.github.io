@@ -287,6 +287,100 @@ section h2 {
     margin-bottom: 15px;
 }
 
+/* Timezone Settings */
+.timezone-settings {
+    margin-bottom: 30px;
+}
+
+.timezone-settings h3 {
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.timezone-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.timezone-group label {
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.timezone-group select {
+    padding: 10px 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    background: white;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.timezone-group select:focus {
+    outline: none;
+    border-color: #0098C3;
+    box-shadow: 0 0 0 3px rgba(0, 152, 195, 0.1);
+}
+
+.area-timezone-mapping {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #0098C3;
+}
+
+.area-timezone-mapping h4 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.area-timezone-mapping p {
+    margin: 0 0 15px 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.area-timezone-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 10px;
+    padding: 10px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.area-timezone-item label {
+    font-weight: 500;
+    color: #2c3e50;
+    min-width: 120px;
+}
+
+.area-timezone-item select {
+    padding: 8px 10px;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    background: white;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    flex: 1;
+}
+
+.area-timezone-item select:focus {
+    outline: none;
+    border-color: #0098C3;
+    box-shadow: 0 0 0 3px rgba(0, 152, 195, 0.1);
+}
+
 /* Time Settings */
 .time-settings h3 {
     margin: 0 0 20px 0;

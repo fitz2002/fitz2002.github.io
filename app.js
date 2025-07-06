@@ -3,6 +3,7 @@ let scheduleData = null;
 let processedEvents = [];
 // No global activityReminderCheckboxes; always get by ID when needed
 let activityReminderMap = {};
+let areaTimezoneMap = {}; // Map of area names to timezone values
 
 // DOM elements
 const fileInput = document.getElementById('fileInput');
@@ -10,6 +11,9 @@ const fileInfo = document.getElementById('fileInfo');
 const enableReminders = document.getElementById('enableReminders');
 const reminderSettings = document.getElementById('reminderSettings');
 const reminderTime = document.getElementById('reminderTime');
+const timezoneSelect = document.getElementById('timezoneSelect');
+const areaTimezoneMapping = document.getElementById('areaTimezoneMapping');
+const areaTimezoneList = document.getElementById('areaTimezoneList');
 const previewSection = document.getElementById('previewSection');
 const previewBtn = document.getElementById('previewBtn');
 const previewTable = document.getElementById('previewTable');
@@ -32,7 +36,39 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize reminder settings visibility
     toggleReminderSettings();
     togglePrePrepSettings();
+    
+    // Set default timezone based on user's location
+    setDefaultTimezone();
 });
+
+// Set default timezone based on user's location
+function setDefaultTimezone() {
+    try {
+        // Get user's timezone
+        const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        
+        // Map common timezone names to our select options
+        const timezoneMap = {
+            'America/New_York': 'America/New_York',
+            'America/Chicago': 'America/Chicago',
+            'America/Denver': 'America/Denver',
+            'America/Los_Angeles': 'America/Los_Angeles',
+            'America/Anchorage': 'America/Anchorage',
+            'Pacific/Honolulu': 'Pacific/Honolulu',
+            'Europe/London': 'Europe/London',
+            'Europe/Paris': 'Europe/Paris',
+            'Asia/Tokyo': 'Asia/Tokyo',
+            'Australia/Sydney': 'Australia/Sydney'
+        };
+        
+        // Set the timezone if it matches one of our options
+        if (timezoneMap[userTimezone] && timezoneSelect) {
+            timezoneSelect.value = timezoneMap[userTimezone];
+        }
+    } catch (error) {
+        console.warn('Could not detect user timezone:', error);
+    }
+}
 
 // File upload handler
 function handleFileUpload(event) {
@@ -74,10 +110,86 @@ function handleFileUpload(event) {
             showActivityReminderCheckboxes();
             // Show/hide checkboxes based on reminder toggle
             toggleReminderSettings();
-        } catch (error) {
-            console.error('Error parsing file:', error);
-            showError('Error parsing the Excel file. Please ensure it\'s a valid .xlsx file.');
+                // Show area timezone mapping
+    showAreaTimezoneMapping();
+} catch (error) {
+    console.error('Error parsing file:', error);
+    showError('Error parsing the Excel file. Please ensure it\'s a valid .xlsx file.');
+}
+
+// Show area timezone mapping for each distinct area
+function showAreaTimezoneMapping() {
+    if (!scheduleData || !areaTimezoneList) return;
+    
+    // Get unique areas
+    const uniqueAreas = Array.from(new Set(scheduleData.map(row => row.area).filter(Boolean)));
+    
+    if (uniqueAreas.length === 0) {
+        areaTimezoneMapping.classList.add('hidden');
+        return;
+    }
+    
+    // Show the mapping section
+    areaTimezoneMapping.classList.remove('hidden');
+    
+    // Clear existing content
+    areaTimezoneList.innerHTML = '';
+    
+    // Create timezone options
+    const timezoneOptions = [
+        { value: 'America/New_York', label: 'Eastern Time (ET) -5' },
+        { value: 'America/Chicago', label: 'Central Time (CT) -6' },
+        { value: 'America/Denver', label: 'Mountain Time (MT) -7' },
+        { value: 'America/Los_Angeles', label: 'Pacific Time (PT) -8' },
+        { value: 'America/Anchorage', label: 'Alaska Time (AKT) -9' },
+        { value: 'Pacific/Honolulu', label: 'Hawaii Time (HT) -10' },
+        { value: 'UTC', label: 'UTC +0' },
+        { value: 'Europe/London', label: 'London (GMT/BST) +0' },
+        { value: 'Europe/Paris', label: 'Paris (CET/CEST) +1' },
+        { value: 'Asia/Tokyo', label: 'Tokyo (JST) +9' },
+        { value: 'Australia/Sydney', label: 'Sydney (AEST/AEDT) +10' }
+    ];
+    
+    // Create dropdown for each area
+    uniqueAreas.forEach(area => {
+        const item = document.createElement('div');
+        item.className = 'area-timezone-item';
+        
+        const label = document.createElement('label');
+        label.textContent = area.replace(/_/g, ' ');
+        
+        const select = document.createElement('select');
+        select.id = `timezone-${area.replace(/_/g, ' ').replace(/\s+/g, '-')}`;
+        
+        // Add options
+        timezoneOptions.forEach(option => {
+            const optionElement = document.createElement('option');
+            optionElement.value = option.value;
+            optionElement.textContent = option.label;
+            select.appendChild(optionElement);
+        });
+        
+        // Set default value (preserve previous selection or use user's timezone)
+        const previousValue = areaTimezoneMap[area];
+        if (previousValue) {
+            select.value = previousValue;
+        } else {
+            select.value = timezoneSelect.value; // Default to user's timezone
         }
+        
+        // Add event listener to update the map
+        select.addEventListener('change', (e) => {
+            areaTimezoneMap[area] = e.target.value;
+        });
+        
+        // Initialize the map
+        areaTimezoneMap[area] = select.value;
+        
+        item.appendChild(label);
+        item.appendChild(select);
+        areaTimezoneList.appendChild(item);
+    });
+}
     };
     
     reader.readAsArrayBuffer(file);
@@ -115,9 +227,8 @@ function parseScheduleData(headers, rows) {
     }
 
     let lastArea = null;
-    let firstArea = null;
+    let firstAreaSeen = false;
     const parsedData = [];
-    const rowsToBackfill = [];
 
     rows.forEach((row, index) => {
         // Skip empty rows
@@ -141,55 +252,43 @@ function parseScheduleData(headers, rows) {
             rowIndex: index + 2 // +2 because we start from row 2 (after headers)
         };
 
-        // Handle area inheritance and backfill
+        // Handle area inheritance
         if (data.area) {
+            // This row has an area specified
             lastArea = data.area;
-            if (!firstArea) {
-                firstArea = data.area;
-                // Backfill all previous rows with empty area
-                rowsToBackfill.forEach(prevData => {
-                    prevData.area = firstArea;
-                });
-                rowsToBackfill.length = 0;
-            }
-        } else if (lastArea) {
+            firstAreaSeen = true;
+        } else if (firstAreaSeen && lastArea) {
+            // We've seen at least one area, so inherit the last area
             data.area = lastArea;
-        } else if (firstArea) {
-            data.area = firstArea;
-        } else {
-            // Save for backfilling once firstArea is found
-            rowsToBackfill.push(data);
         }
+        // If firstAreaSeen is false, leave area empty (don't populate)
 
         console.log(`Parsed row ${index + 2}:`, data);
         parsedData.push(data);
     });
 
-    // Final backfill if firstArea is found after parsing
-    if (firstArea) {
-        rowsToBackfill.forEach(prevData => {
-            prevData.area = firstArea;
-        });
-    }
-
     console.log('Total parsed rows:', parsedData.length);
     return parsedData;
 }
 
-// Update parseDate to use Luxon without timezone
+// Update parseDate to use Luxon with base timezone
 function parseDate(dateVal) {
     if (!dateVal) return null;
+    
+    // Always parse dates in the user's base timezone
+    const baseTimezone = timezoneSelect.value;
+    
     if (typeof dateVal === 'number') {
         // Excel serial date to JS Date (local time, not UTC)
         const utc_days = dateVal - 25569;
         const utc_value = utc_days * 86400 * 1000;
         const date = new Date(utc_value);
-        // Use Luxon to get correct local date
+        // Use Luxon to get correct date in base timezone
         return luxon.DateTime.fromObject({
             year: date.getUTCFullYear(),
             month: date.getUTCMonth() + 1,
             day: date.getUTCDate()
-        });
+        }, { zone: baseTimezone });
     }
     // Otherwise, try to parse as mm/dd/yy
     const parts = dateVal.toString().split('/');
@@ -197,7 +296,7 @@ function parseDate(dateVal) {
     const month = parseInt(parts[0]);
     const day = parseInt(parts[1]);
     const year = parseInt(parts[2]) + 2000;
-    return luxon.DateTime.fromObject({ year, month, day });
+    return luxon.DateTime.fromObject({ year, month, day }, { zone: baseTimezone });
 }
 
 // Generate calendar events
@@ -244,7 +343,7 @@ function generateCalendarEvents() {
     return events;
 }
 
-// Update createEvent to use Luxon for reminder calculation
+// Update createEvent to use Luxon for reminder calculation with timezone conversion
 function createEvent(row, fromDate, toDate, timeSettings, reminderSettings) {
     const subject = `${row.activity} - ${row.version}`.trim();
     
@@ -267,6 +366,8 @@ function createEvent(row, fromDate, toDate, timeSettings, reminderSettings) {
             description += `\nNotes: ${row.departureAttributes}`;
         }
     }
+    
+    // Get time settings in base timezone
     let startTime, endTime, allDay = false;
     switch (row.activity) {
         case 'Prep Trip':
@@ -295,50 +396,102 @@ function createEvent(row, fromDate, toDate, timeSettings, reminderSettings) {
             startTime = '09:00';
             endTime = '17:00';
     }
-    // Use Luxon for event start/end
+    
+    // Convert times from base timezone to area timezone
+    let areaStartTime = startTime;
+    let areaEndTime = endTime;
+    
+    if (row.area && areaTimezoneMap[row.area] && !allDay) {
+        const baseTimezone = timezoneSelect.value;
+        const areaTimezone = areaTimezoneMap[row.area];
+        
+        // Create a reference date in the base timezone with the start time
+        if (startTime) {
+            const [h, m] = startTime.split(':');
+            const baseTime = fromDate.set({ hour: parseInt(h), minute: parseInt(m), second: 0, millisecond: 0 });
+            const areaTime = baseTime.setZone(areaTimezone);
+            areaStartTime = areaTime.toFormat('HH:mm');
+        }
+        
+        // Create a reference date in the base timezone with the end time
+        if (endTime) {
+            const [h, m] = endTime.split(':');
+            const baseTime = toDate.set({ hour: parseInt(h), minute: parseInt(m), second: 0, millisecond: 0 });
+            const areaTime = baseTime.setZone(areaTimezone);
+            areaEndTime = areaTime.toFormat('HH:mm');
+        }
+    }
+    
+    // Use Luxon for event start/end in area timezone
     let eventStart = fromDate;
     let eventEnd = toDate;
-    if (!allDay && startTime) {
-        const [h, m] = startTime.split(':');
+    
+    if (!allDay && areaStartTime) {
+        const [h, m] = areaStartTime.split(':');
         eventStart = eventStart.set({ hour: parseInt(h), minute: parseInt(m), second: 0, millisecond: 0 });
+        
+        // Convert to area timezone
+        if (row.area && areaTimezoneMap[row.area]) {
+            eventStart = eventStart.setZone(areaTimezoneMap[row.area]);
+        }
     } else {
         eventStart = eventStart.set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
+        if (row.area && areaTimezoneMap[row.area]) {
+            eventStart = eventStart.setZone(areaTimezoneMap[row.area]);
+        }
     }
-    if (!allDay && endTime) {
-        const [h, m] = endTime.split(':');
+    
+    if (!allDay && areaEndTime) {
+        const [h, m] = areaEndTime.split(':');
         eventEnd = eventEnd.set({ hour: parseInt(h), minute: parseInt(m), second: 0, millisecond: 0 });
+        
+        // Convert to area timezone
+        if (row.area && areaTimezoneMap[row.area]) {
+            eventEnd = eventEnd.setZone(areaTimezoneMap[row.area]);
+        }
     } else {
         eventEnd = eventEnd.set({ hour: 23, minute: 59, second: 59, millisecond: 999 });
+        if (row.area && areaTimezoneMap[row.area]) {
+            eventEnd = eventEnd.setZone(areaTimezoneMap[row.area]);
+        }
     }
+    
     const event = {
         subject: subject,
         description: description,
         location: location,
         fromDate: eventStart,
         toDate: eventEnd,
-        startTime: startTime,
-        endTime: endTime,
+        startTime: areaStartTime,
+        endTime: areaEndTime,
         allDay: allDay,
         hasTravel: !!(row.fromLoc || row.toLoc),
         fromLoc: row.fromLoc,
         toLoc: row.toLoc
     };
+    
     if (reminderSettings.enabled && reminderSettings.activityMap[row.activity]) {
         let reminderDate;
         if (allDay) {
-            // For all-day events, calculate reminder based on 8:00 AM start time
+            // For all-day events, calculate reminder based on 8:00 AM start time in area timezone
             const eventStartAt8AM = eventStart.set({ hour: 8, minute: 0, second: 0, millisecond: 0 });
             reminderDate = eventStartAt8AM.minus({ hours: reminderSettings.hours });
         } else {
             // For timed events, use the actual start time
             reminderDate = eventStart.minus({ hours: reminderSettings.hours });
         }
+        
+        // Convert reminder to user's base timezone for display
+        const baseTimezone = timezoneSelect.value;
+        reminderDate = reminderDate.setZone(baseTimezone);
+        
         event.reminderDate = reminderDate;
     }
+    
     return event;
 }
 
-// Create Pre Prep event
+// Create Pre Prep event with timezone conversion
 function createPrePrepEvent(row, prePrepDate, timeSettings, reminderSettings) {
     const subject = `Pre Prep - ${row.version}`.trim();
     const location = (row.area || '').replace(/_/g, ' ');
@@ -355,17 +508,53 @@ function createPrePrepEvent(row, prePrepDate, timeSettings, reminderSettings) {
     const startTime = timeSettings.prePrepStart;
     const endTime = timeSettings.prePrepEnd;
     
-    // Use Luxon for event start/end
+    // Convert times from base timezone to area timezone
+    let areaStartTime = startTime;
+    let areaEndTime = endTime;
+    
+    if (row.area && areaTimezoneMap[row.area]) {
+        const baseTimezone = timezoneSelect.value;
+        const areaTimezone = areaTimezoneMap[row.area];
+        
+        // Create a reference date in the base timezone with the start time
+        if (startTime) {
+            const [h, m] = startTime.split(':');
+            const baseTime = prePrepDate.set({ hour: parseInt(h), minute: parseInt(m), second: 0, millisecond: 0 });
+            const areaTime = baseTime.setZone(areaTimezone);
+            areaStartTime = areaTime.toFormat('HH:mm');
+        }
+        
+        // Create a reference date in the base timezone with the end time
+        if (endTime) {
+            const [h, m] = endTime.split(':');
+            const baseTime = prePrepDate.set({ hour: parseInt(h), minute: parseInt(m), second: 0, millisecond: 0 });
+            const areaTime = baseTime.setZone(areaTimezone);
+            areaEndTime = areaTime.toFormat('HH:mm');
+        }
+    }
+    
+    // Use Luxon for event start/end in area timezone
     let eventStart = prePrepDate;
     let eventEnd = prePrepDate;
     
-    if (startTime) {
-        const [h, m] = startTime.split(':');
+    if (areaStartTime) {
+        const [h, m] = areaStartTime.split(':');
         eventStart = eventStart.set({ hour: parseInt(h), minute: parseInt(m), second: 0, millisecond: 0 });
+        
+        // Convert to area timezone
+        if (row.area && areaTimezoneMap[row.area]) {
+            eventStart = eventStart.setZone(areaTimezoneMap[row.area]);
+        }
     }
-    if (endTime) {
-        const [h, m] = endTime.split(':');
+    
+    if (areaEndTime) {
+        const [h, m] = areaEndTime.split(':');
         eventEnd = eventEnd.set({ hour: parseInt(h), minute: parseInt(m), second: 0, millisecond: 0 });
+        
+        // Convert to area timezone
+        if (row.area && areaTimezoneMap[row.area]) {
+            eventEnd = eventEnd.setZone(areaTimezoneMap[row.area]);
+        }
     }
     
     const event = {
@@ -374,8 +563,8 @@ function createPrePrepEvent(row, prePrepDate, timeSettings, reminderSettings) {
         location: location,
         fromDate: eventStart,
         toDate: eventEnd,
-        startTime: startTime,
-        endTime: endTime,
+        startTime: areaStartTime,
+        endTime: areaEndTime,
         allDay: false,
         hasTravel: !!(row.fromLoc || row.toLoc),
         fromLoc: row.fromLoc,
@@ -383,7 +572,12 @@ function createPrePrepEvent(row, prePrepDate, timeSettings, reminderSettings) {
     };
     
     if (reminderSettings.enabled && reminderSettings.activityMap['Pre Prep']) {
-        const reminderDate = eventStart.minus({ hours: reminderSettings.hours });
+        let reminderDate = eventStart.minus({ hours: reminderSettings.hours });
+        
+        // Convert reminder to user's base timezone for display
+        const baseTimezone = timezoneSelect.value;
+        reminderDate = reminderDate.setZone(baseTimezone);
+        
         event.reminderDate = reminderDate;
     }
     
@@ -455,6 +649,12 @@ function generatePreview() {
         showError('Please upload a file first.');
         return;
     }
+
+    // Clear previous preview and status
+    previewTable.innerHTML = '';
+    eventCount.textContent = '';
+    exportStatus.textContent = '';
+    exportStatus.className = 'export-status';
 
     processedEvents = generateCalendarEvents();
     
@@ -572,6 +772,7 @@ function exportCalendar() {
 
 // Export Google Calendar CSV
 function exportGoogleCalendar(events) {
+    const userTimezone = timezoneSelect.value;
     const headers = ['Subject', 'Start Date', 'End Date', 'Start Time', 'End Time', 'All Day Event', 'Reminder Date', 'Reminder Time', 'Description', 'Location'];
     
     const csvContent = [
@@ -583,10 +784,15 @@ function exportGoogleCalendar(events) {
                 reminderDate = formatDate(event.reminderDate);
                 reminderTime = formatTime(event.reminderDate);
             }
+            
+            // Convert dates to user's timezone for export
+            const userFromDate = event.fromDate.setZone(userTimezone);
+            const userToDate = event.toDate.setZone(userTimezone);
+            
             return [
                 `"${event.subject}"`,
-                formatDate(event.fromDate),
-                formatDate(event.toDate),
+                formatDate(userFromDate),
+                formatDate(userToDate),
                 event.startTime,
                 event.endTime,
                 event.allDay ? 'True' : 'False',
@@ -603,17 +809,20 @@ function exportGoogleCalendar(events) {
 
 // Export Outlook Calendar ICS
 function exportOutlookCalendar(events) {
+    const userTimezone = timezoneSelect.value;
     const icsEvents = events.map(event => {
-        // Format datetime for ICS (local timezone)
+        // Format datetime for ICS with timezone
         let startDateTime, endDateTime;
         
         if (event.allDay) {
             startDateTime = formatDate(event.fromDate);
             endDateTime = formatDate(event.toDate);
         } else {
-            // Use local timezone formatting
-            startDateTime = formatDateTime(event.fromDate, event.startTime);
-            endDateTime = formatDateTime(event.toDate, event.endTime);
+            // Convert to user's timezone for export
+            const userStartDate = event.fromDate.setZone(userTimezone);
+            const userEndDate = event.toDate.setZone(userTimezone);
+            startDateTime = formatDateTimeWithTimezone(userStartDate, event.startTime, userTimezone);
+            endDateTime = formatDateTimeWithTimezone(userEndDate, event.endTime, userTimezone);
         }
 
         let icsEvent = [
@@ -643,6 +852,7 @@ function exportOutlookCalendar(events) {
         'PRODID:-//Work Schedule Exporter//EN',
         'CALSCALE:GREGORIAN',
         'METHOD:PUBLISH',
+        `X-WR-TIMEZONE:${userTimezone}`,
         ...icsEvents,
         'END:VCALENDAR'
     ].join('\r\n');
@@ -682,6 +892,20 @@ function formatDateTime(date, time) {
             return date.set({ hour: parseInt(h), minute: parseInt(m), second: 0, millisecond: 0 }).toFormat("yyyyLLdd'T'HHmmss");
         }
         return date.toFormat("yyyyLLdd'T'HHmmss");
+    }
+    const dateStr = formatDate(date);
+    return `${dateStr}T${time}:00`;
+}
+function formatDateTimeWithTimezone(date, time, timezone) {
+    if (!date) return '';
+    if (date.toFormat) {
+        if (time) {
+            const [h, m] = time.split(':');
+            const dateTime = date.set({ hour: parseInt(h), minute: parseInt(m), second: 0, millisecond: 0 });
+            // Convert to the specified timezone and format for ICS
+            return dateTime.setZone(timezone).toFormat("yyyyLLdd'T'HHmmss");
+        }
+        return date.setZone(timezone).toFormat("yyyyLLdd'T'HHmmss");
     }
     const dateStr = formatDate(date);
     return `${dateStr}T${time}:00`;

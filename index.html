@@ -134,6 +134,32 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Timezone Settings -->
+                <div class="timezone-settings">
+                    <h3>Your Timezone</h3>
+                    <div class="timezone-group">
+                        <label for="timezoneSelect">Select your current timezone:</label>
+                        <select id="timezoneSelect">
+                            <option value="America/New_York">Eastern Time (ET) -5</option>
+                            <option value="America/Chicago">Central Time (CT) -6</option>
+                            <option value="America/Denver">Mountain Time (MT) -7</option>
+                            <option value="America/Los_Angeles">Pacific Time (PT) -8</option>
+                            <option value="America/Anchorage">Alaska Time (AKT) -9</option>
+                            <option value="Pacific/Honolulu">Hawaii Time (HT) -10</option>
+                            <option value="UTC">UTC +0</option>
+                            <option value="Europe/London">London (GMT/BST) +0</option>
+                            <option value="Europe/Paris">Paris (CET/CEST) +1</option>
+                            <option value="Asia/Tokyo">Tokyo (JST) +9</option>
+                            <option value="Australia/Sydney">Sydney (AEST/AEDT) +10</option>
+                        </select>
+                    </div>
+                    <div id="areaTimezoneMapping" class="area-timezone-mapping hidden">
+                        <h4>Area Timezone Mapping</h4>
+                        <p>Select the timezone for each area to calculate correct reminder times:</p>
+                        <div id="areaTimezoneList"></div>
+                    </div>
+                </div>
             </section>
 
             <!-- Preview Section -->
