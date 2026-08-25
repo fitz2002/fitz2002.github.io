@@ -1,0 +1,455 @@
+/* ─────────────────────────────────────────
+   app.js
+   Top-level orchestration.
+   Wires up UI event listeners and runs
+   the main "process & send" workflow.
+
+   Depends on (loaded before this file):
+     fileHandler.js    — templateText, file upload
+     dateUtils.js      — buildDateMap, buildDayGrid
+     templateParser.js — parseEmails, applySubstitutions
+     emailSender.js    — authenticateOutlook, sendEmail
+───────────────────────────────────────── */
+
+// ── Leader Name/Number fields, built dynamically from the
+// "Number of Leaders" dropdown so there's always exactly one
+// Name/Number pair per leader (ids: leader1Name/leader1Num …) ──
+const LEADER_PLACEHOLDER_NAMES = ['Michael Jordan', 'LeBron James', 'Tom Hale', 'Kobe Bryant', 'Larry Bird'];
+
+function buildLeaderFields() {
+  const count = parseInt(document.getElementById('numLeader').value) || 0;
+  const container = document.getElementById('leader-fields');
+
+  // Preserve any values already entered when the count changes
+  const prevValues = {};
+  container.querySelectorAll('textarea').forEach(el => { prevValues[el.id] = el.value; });
+  container.innerHTML = '';
+
+  for (let i = 1; i <= count; i++) {
+    container.appendChild(createLeaderFieldPair(i, prevValues));
+  }
+}
+
+function createLeaderFieldPair(leaderNumber, prevValues) {
+  const row = document.createElement('div');
+  row.className = 'two-col';
+
+  const nameField = document.createElement('div');
+  nameField.className = 'field';
+  const nameLabel = document.createElement('label');
+  nameLabel.textContent = `Leader ${leaderNumber} Name`;
+  const nameInput = document.createElement('textarea');
+  nameInput.id = `leader${leaderNumber}Name`;
+  nameInput.rows = 1;
+  nameInput.placeholder = LEADER_PLACEHOLDER_NAMES[leaderNumber - 1] || 'Leader name';
+  nameInput.value = prevValues[nameInput.id] || '';
+  nameField.appendChild(nameLabel);
+  nameField.appendChild(nameInput);
+
+  const numField = document.createElement('div');
+  numField.className = 'field';
+  const numLabel = document.createElement('label');
+  numLabel.textContent = `Leader ${leaderNumber} Number`;
+  const numInput = document.createElement('textarea');
+  numInput.id = `leader${leaderNumber}Num`;
+  numInput.rows = 1;
+  numInput.placeholder = '(xxx) xxx-xxxx';
+  numInput.value = prevValues[numInput.id] || '';
+  numField.appendChild(numLabel);
+  numField.appendChild(numInput);
+
+  row.appendChild(nameField);
+  row.appendChild(numField);
+  return row;
+}
+
+// ── Hotel room-count fields, built dynamically from the
+// "Number of Hotels" dropdown (ids: hotel1Rooms, hotel2Rooms, …) ──
+// Column count per hotel count, chosen so rows stay visually balanced:
+// 1→1, 2→2, 3→3 (all in one row), 4→2 (2x2), 5→3 (3 top, 2 below)
+const HOTEL_GRID_COLS = { 1: 1, 2: 2, 3: 3, 4: 2, 5: 3 };
+
+function buildHotelFields() {
+  const count = parseInt(document.getElementById('numHotels').value) || 0;
+  const container = document.getElementById('hotel-fields');
+
+  // Preserve any values already entered when the count changes
+  const prevValues = {};
+  container.querySelectorAll('textarea').forEach(el => { prevValues[el.id] = el.value; });
+  container.innerHTML = '';
+
+  const cols = HOTEL_GRID_COLS[count] || Math.min(count, 3) || 1;
+  container.className = `field-grid cols-${cols}`;
+
+  for (let i = 1; i <= count; i++) {
+    container.appendChild(createHotelField(i, prevValues));
+  }
+}
+
+function createHotelField(hotelNumber, prevValues) {
+  const field = document.createElement('div');
+  field.className = 'field';
+  const label = document.createElement('label');
+  label.textContent = `Number of Rooms Hotel ${hotelNumber}`;
+  const input = document.createElement('textarea');
+  input.id = `hotel${hotelNumber}Rooms`;
+  input.rows = 1;
+  input.placeholder = '...';
+  input.value = prevValues[input.id] || '';
+  field.appendChild(label);
+  field.appendChild(input);
+  return field;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('numLeader').addEventListener('change', buildLeaderFields);
+  buildLeaderFields();
+
+  document.getElementById('numHotels').addEventListener('change', buildHotelFields);
+  buildHotelFields();
+});
+
+// ── Main workflow: parse template → preview → send ──
+async function processAndSend() {
+  clearUI();
+
+  if (!templateText) {
+    addLog('error', 'No template loaded. Please upload a template file first.');
+    return;
+  }
+
+  const sendBtn = document.getElementById('send-btn');
+  sendBtn.disabled = true;
+  sendBtn.innerHTML = '<span class="btn-icon">⏳</span> Processing…';
+
+  try {
+    const token = document.getElementById('access-token')?.value.trim() || '';
+    if (!token) {
+      addLog('warn', 'No access token — will preview emails but NOT send. Authenticate in Step 1 to send.');
+    }
+
+    addLog('info', 'Parsing template…');
+    const emails = parseEmails(templateText);
+    addLog('info', `Found ${emails.length} email(s) in template.`);
+
+    emails.forEach(email => {
+      if (email.unresolvedPlaceholders.length) {
+        addLog('warn', `Email ${email.emailNumber}: unresolved placeholder(s) ${email.unresolvedPlaceholders.join(', ')} — check the source template for typos.`);
+      }
+    });
+
+    const statusEls = renderEmailCards(emails);
+
+    if (!token) {
+      addLog('warn', 'Preview complete. No emails sent (not authenticated).');
+      return;
+    }
+
+    sendBtn.innerHTML = '<span class="btn-icon">⏳</span> Sending…';
+
+    let successCount = 0;
+    let failCount    = 0;
+
+    for (let i = 0; i < emails.length; i++) {
+      const email = emails[i];
+
+      if (email.deleted) {
+        addLog('info', `Email ${email.emailNumber} was removed — skipping.`);
+        continue;
+      }
+
+      if (!email.recipients.length) {
+        addLog('warn', `Email ${email.emailNumber}: No To: recipients found — skipped.`);
+        setEmailStatus(statusEls[i], 'failed', 'Skipped');
+        failCount++;
+        continue;
+      }
+
+      if (email.unresolvedPlaceholders.length) {
+        addLog('error', `Email ${email.emailNumber}: unresolved placeholder(s) ${email.unresolvedPlaceholders.join(', ')} — skipped, not sent to vendor.`);
+        setEmailStatus(statusEls[i], 'failed', 'Blocked');
+        failCount++;
+        continue;
+      }
+
+      addLog('info', `Sending email ${email.emailNumber} → ${email.recipients.join(', ')}…`);
+
+      try {
+        await sendEmail(email.recipients, email.cc, email.subject, email.body, token);
+        addLog('success', `✓ Email ${email.emailNumber} sent to ${email.recipients.join(', ')}`);
+        setEmailStatus(statusEls[i], 'sent', 'Sent');
+        successCount++;
+      } catch (err) {
+        addLog('error', `✗ Email ${email.emailNumber} failed: ${err.message}`);
+        setEmailStatus(statusEls[i], 'failed', 'Failed');
+        failCount++;
+      }
+
+      await delay(400);
+    }
+
+    const allOk = failCount === 0;
+    addLog(
+      allOk ? 'success' : 'warn',
+      `Done. ${successCount} sent, ${failCount} failed.`
+    );
+
+  } catch (err) {
+    addLog('error', `Unexpected error: ${err.message}`);
+    console.error(err);
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.innerHTML = '<span class="btn-icon">✉️</span> Process &amp; Send All Emails';
+  }
+}
+
+// ── Builds the "To: ... CC: ... Subject: ..." summary markup,
+// including a warning line when unresolved placeholder syntax
+// (e.g. a typo'd [D2DATE]) is still present in the body/subject ──
+function buildToAddrHTML(email) {
+  const warning = email.unresolvedPlaceholders.length
+    ? `<br><span style="color:#c0392b;font-weight:600;">⚠ Unresolved placeholder(s): ${email.unresolvedPlaceholders.join(', ')} — will not be sent</span>`
+    : '';
+  return `To: ${email.recipients.join('; ') || '(no recipients found)'}` +
+    (email.cc.length ? ` &nbsp;|&nbsp; CC: ${email.cc.join('; ')}` : '') +
+    `<br><span class="subject-preview">Subject: ${email.subject || '(no subject)'}</span>` +
+    warning;
+}
+
+// ── Builds the full header row markup for one email card ──
+function buildHeadSummaryHTML(email) {
+  return `
+      <span class="to-addr">
+        ${buildToAddrHTML(email)}
+      </span>
+      <span class="email-num">Email ${email.emailNumber}</span>
+    `;
+}
+
+// ── Renders an email preview card for each parsed email ──
+// Returns an array of status <span> elements (one per email)
+function renderEmailCards(emails) {
+  const previewWrap  = document.getElementById('emails-preview');
+  const emailsList   = document.getElementById('emails-list');
+  const previewLabel = document.getElementById('emails-preview-label');
+
+  previewWrap.style.display = 'block';
+  previewLabel.textContent  = `${emails.length} Parsed Email${emails.length !== 1 ? 's' : ''}`;
+
+  const statusEls = [];
+
+  emails.forEach((email, i) => {
+    // ── Status badge ──
+    const statusSpan = document.createElement('span');
+    statusSpan.className = 'email-send-status status-pending';
+    statusSpan.textContent = 'Pending';
+    statusEls.push(statusSpan);
+
+    // ── Action buttons (Edit / Delete) ──
+    const actions = document.createElement('div');
+    actions.className = 'email-card-actions';
+
+    const editBtn   = document.createElement('button');
+    editBtn.className   = 'btn-edit';
+    editBtn.textContent = '✏️ Edit';
+
+    const deleteBtn   = document.createElement('button');
+    deleteBtn.className   = 'btn-delete';
+    deleteBtn.textContent = '🗑 Delete';
+
+    actions.appendChild(editBtn);
+    actions.appendChild(deleteBtn);
+
+    // ── Header row ──
+    const head = document.createElement('div');
+    head.className = 'email-card-head';
+    head.innerHTML = buildHeadSummaryHTML(email);
+    head.appendChild(statusSpan);
+    head.appendChild(actions);
+
+    // ── Body (read-only display) ──
+    const bodyDiv = document.createElement('div');
+    bodyDiv.className = 'email-card-body';
+    bodyDiv.textContent = email.body;
+
+    // ── Assemble card ──
+    const card = document.createElement('div');
+    card.className = 'email-card';
+    card.appendChild(head);
+    card.appendChild(bodyDiv);
+    emailsList.appendChild(card);
+
+    // ── Helper: rebuilds the read-only header summary line ──
+    function refreshHeadSummary() {
+      head.querySelector('.to-addr').innerHTML = buildToAddrHTML(email);
+    }
+
+    // ── Helper: rebuilds the read-only body display ──
+    function refreshBodyDisplay() {
+      bodyDiv.className = 'email-card-body';
+      bodyDiv.innerHTML = '';
+      bodyDiv.textContent = email.body;
+    }
+
+    // ── Edit button logic ──
+    editBtn.addEventListener('click', () => {
+      if (card.classList.contains('deleted')) return;
+
+      // Build the edit form
+      const form = document.createElement('div');
+      form.className = 'email-edit-form';
+
+      // Subject field
+      const subjectLabel = document.createElement('label');
+      subjectLabel.className = 'edit-field-label';
+      subjectLabel.textContent = 'Subject';
+      const subjectInput = document.createElement('input');
+      subjectInput.type  = 'text';
+      subjectInput.value = email.subject;
+
+      // To field
+      const toLabel = document.createElement('label');
+      toLabel.className = 'edit-field-label';
+      toLabel.textContent = 'To  (semicolon-separated)';
+      const toInput = document.createElement('input');
+      toInput.type  = 'text';
+      toInput.value = email.recipients.join('; ');
+
+      // CC field
+      const ccLabel = document.createElement('label');
+      ccLabel.className = 'edit-field-label';
+      ccLabel.textContent = 'CC  (semicolon-separated)';
+      const ccInput = document.createElement('input');
+      ccInput.type  = 'text';
+      ccInput.value = email.cc.join('; ');
+
+      // Body textarea
+      const bodyLabel = document.createElement('label');
+      bodyLabel.className = 'edit-field-label';
+      bodyLabel.textContent = 'Body';
+      const bodyTextarea = document.createElement('textarea');
+      bodyTextarea.value = email.body;
+
+      form.appendChild(subjectLabel);
+      form.appendChild(subjectInput);
+      form.appendChild(toLabel);
+      form.appendChild(toInput);
+      form.appendChild(ccLabel);
+      form.appendChild(ccInput);
+      form.appendChild(bodyLabel);
+      form.appendChild(bodyTextarea);
+
+      // Swap body div content for the form
+      bodyDiv.className = 'email-card-body editing';
+      bodyDiv.innerHTML = '';
+      bodyDiv.appendChild(form);
+      card.classList.add('editing-mode');
+      subjectInput.focus();
+
+      // Swap action buttons to Save / Cancel
+      const saveBtn = document.createElement('button');
+      saveBtn.className   = 'btn-save';
+      saveBtn.textContent = '💾 Save';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className   = 'btn-cancel';
+      cancelBtn.textContent = '✕ Cancel';
+
+      actions.innerHTML = '';
+      actions.appendChild(saveBtn);
+      actions.appendChild(cancelBtn);
+
+      // ── Save ──
+      saveBtn.addEventListener('click', () => {
+        email.subject    = subjectInput.value.trim();
+        email.recipients = toInput.value.split(';').map(e => e.trim()).filter(Boolean);
+        email.cc         = ccInput.value.split(';').map(e => e.trim()).filter(Boolean);
+        email.body       = bodyTextarea.value;
+        // Re-check for leftover placeholder syntax since manual edits
+        // could introduce or resolve one.
+        email.unresolvedPlaceholders = [
+          ...findUnresolvedPlaceholders(email.body),
+          ...findUnresolvedPlaceholders(email.subject),
+        ];
+
+        refreshHeadSummary();
+        refreshBodyDisplay();
+        card.classList.remove('editing-mode');
+
+        actions.innerHTML = '';
+        actions.appendChild(editBtn);
+        actions.appendChild(deleteBtn);
+      });
+
+      // ── Cancel ──
+      cancelBtn.addEventListener('click', () => {
+        refreshBodyDisplay();
+        card.classList.remove('editing-mode');
+
+        actions.innerHTML = '';
+        actions.appendChild(editBtn);
+        actions.appendChild(deleteBtn);
+      });
+    });
+
+    // ── Delete button logic ──
+    deleteBtn.addEventListener('click', () => {
+      email.deleted = true;
+      card.classList.add('deleted');
+      statusSpan.className   = 'email-send-status status-failed';
+      statusSpan.textContent = 'Removed';
+
+      // Replace action buttons with an Undo option
+      actions.innerHTML = '';
+      const undoBtn   = document.createElement('button');
+      undoBtn.className   = 'btn-edit';   // reuse teal style
+      undoBtn.textContent = '↩ Undo';
+      actions.appendChild(undoBtn);
+
+      undoBtn.addEventListener('click', () => {
+        email.deleted = false;
+        card.classList.remove('deleted');
+        statusSpan.className   = 'email-send-status status-pending';
+        statusSpan.textContent = 'Pending';
+
+        actions.innerHTML = '';
+        actions.appendChild(editBtn);
+        actions.appendChild(deleteBtn);
+      });
+    });
+  });
+
+  return statusEls;
+}
+
+// ── Updates one email card's status badge ──
+function setEmailStatus(spanEl, type, label) {
+  spanEl.className = `email-send-status status-${type}`;
+  spanEl.textContent = label;
+}
+
+// ── Appends a line to the send log ──
+function addLog(type, message) {
+  const logSection = document.getElementById('log-section');
+  logSection.classList.add('visible');
+
+  const entry = document.createElement('div');
+  entry.className = `log-entry ${type}`;
+  entry.innerHTML = `<span class="log-dot"></span><span>${message}</span>`;
+
+  document.getElementById('log-list').appendChild(entry);
+  entry.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ── Resets the log and email preview before each run ──
+function clearUI() {
+  document.getElementById('log-list').innerHTML    = '';
+  document.getElementById('emails-list').innerHTML = '';
+  document.getElementById('log-section').classList.remove('visible');
+  document.getElementById('emails-preview').style.display = 'none';
+}
+
+// ── Simple promise-based delay ──
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}

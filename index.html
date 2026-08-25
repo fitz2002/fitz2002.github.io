@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirm Email Updater</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/styles.css">
+  <link rel="icon" type="image/x-icon" href="./resources/favicon.ico">
+</head>
+<body>
+
+  <header>
+    <div class="brand">Backroads <span>Email Updater</span></div>
+    <img class="brand" style="height: 2.5vw;" src="./resources/brds_logo.png" alt="Logo">
+  </header>
+
+  <div class="page-wrap">
+    <h1 class="page-title">Confirm Email Template Updater</h1>
+    <p class="page-subtitle">Upload a template, fill in trip details, and send personalized emails in one click.</p>
+    <p class="page-subtitle">See a guide on how to use <a href="https://claude.ai/code/artifact/1dcd122b-1c88-4e4c-b908-02ac91d93635" target="_blank" rel="noopener">here.</a></p>
+
+    <!-- ── STEP 1: Upload Template ── -->
+    <div class="card">
+      <div class="card-header">
+        <div class="step-num">1</div>
+        <h2>Upload Email Template</h2>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label>Template File <span class="hint">(.txt or .docx)</span></label>
+          <div class="file-drop-zone" id="drop-zone">
+            <input type="file" id="file-input" accept=".txt,.docx" onchange="handleFileUpload(event)">
+            <span class="file-icon">📄</span>
+            <p><strong>Click to browse</strong> or drag &amp; drop your template here</p>
+            <p class="file-sub">Supports .txt and .docx (Word) files</p>
+          </div>
+          <div class="file-name-display" id="file-name-display"></div>
+        </div>
+        <div id="template-preview-wrap">
+          <p class="preview-label">Template Preview</p>
+          <pre id="template-preview"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STEP 2: Trip Details ── -->
+    <div class="card">
+      <div class="card-header">
+        <div class="step-num">2</div>
+        <h2>Trip Details</h2>
+      </div>
+      <div class="card-body">
+        <div class="two-col">
+          <div class="field">
+            <label>Number of Trip Days</label>
+            <select id="day-count">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6" selected>6</option>
+              <option value="7">7</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Prep Day Date</label>
+            <input type="date" id="d1-date">
+          </div>
+        </div>
+        <div id="day-grid" style="padding-bottom: 10px;"></div>
+        <div class="field">
+            <label>Prep Staff Name:</label>
+            <textarea class="smallInput" id="prepperName" rows="2" placeholder="Mike"></textarea>
+        </div>
+        
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="step-num">3</div>
+          <h2>Guest Details</h2>
+      </div>
+          <div class="card-body">
+            <div class="two-col">
+              <div class="field">
+                  <label>Number of Guests:</label>
+                  <textarea id="numGuest" rows="2" placeholder="0-26"></textarea>
+              </div>
+              <div class="field">
+                  <label>Number of Adults:</label>
+                  <textarea id="numAdult" rows="2" placeholder="0-26"></textarea>
+              </div>
+              <div class="field">
+                  <label>Number of Kids:</label>
+                  <textarea id="numKid" rows="2" placeholder="Leave blank if no kids"></textarea>
+              </div>
+              <div class="field">
+                  <label>Kids Ages:</label>
+                  <textarea id="kidAges" rows="2" placeholder="2, 4, 6, 8, 10, 12"></textarea>
+              </div>
+            </div>
+            <div class="field">
+              <label>Dietary Restrictions </label>
+              <textarea id="dietary-input" rows="4" placeholder="Leave blank if no dietary restrictions&#10;Karen: Gluten-free&#10;Dennis: Nut allergy&#10;Helen: Vegetarian"></textarea>
+            </div>
+          </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="step-num">4</div>
+          <h2>Leader Details</h2>
+      </div>
+      <div class="card-body">
+        <div class="field">
+            <label>Number of Leaders:</label>
+            <select id="numLeader">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3" selected>3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+        </div>
+        <div id="leader-fields"></div>
+        <div class="field">
+          <label>Co-leader emails <span class="hint">(semicolon-separated)</span></label>
+          <textarea id="cc-input" rows="2" placeholder="leader@backroads.com; guide@backroads.com"></textarea>
+        </div>
+      </div> 
+    </div>
+
+        <div class="card">
+      <div class="card-header">
+        <div class="step-num">5</div>
+          <h2>Hotel Details</h2>
+      </div>
+      <div class="card-body">
+        <div class="field">
+            <label>Number of Hotels:</label>
+            <select id="numHotels">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3" selected>3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+        </div>
+        <div id="hotel-fields"></div>
+        <div class="field">
+          <label>Special Requests for Hotels</label>
+          <textarea id="specialRequest" rows="1" placeholder="Please give Tom and Nancy the nicest room. Put Karen and Bill near them please."></textarea>
+        </div>
+      </div>
+    </div>
+
+
+
+    <!-- <div class="card">
+      <div class="card-header">
+        <div class="step-num">4
+          <h2>Trip Details</h2>
+        </div>
+      </div>
+    </div> -->
+
+    <!-- ── STEP 6: Authentication (needed right before sending) ── -->
+    <div class="card">
+      <div class="card-header">
+        <div class="step-num">6</div>
+        <h2>Microsoft Outlook Authentication</h2>
+      </div>
+      <div class="card-body">
+        <div class="auth-note">
+          <strong>⚠ OAuth Required:</strong> To send emails via Microsoft Graph API, you must authenticate with your Outlook / Microsoft 365 account.
+        </div>
+        <div class="auth-row">
+          <button id="auth-btn" onclick="authenticateOutlook()">
+            🔑 Sign in with Microsoft
+          </button>
+          <input type="hidden" id="access-token">
+          <span id="token-status">
+            <span class="dot"></span> Not authenticated
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STEP 7: Review & Send ── -->
+    <div class="card">
+      <div class="card-header">
+        <div class="step-num">7</div>
+        <h2>Review &amp; Send</h2>
+      </div>
+      <div class="card-body">
+        <div class="submit-wrap">
+          <button id="send-btn" onclick="processAndSend()">
+            <span class="btn-icon">✉️</span> Process &amp; Send All Emails
+          </button>
+        </div>
+        <div id="emails-preview">
+          <p class="preview-label" id="emails-preview-label"></p>
+          <div id="emails-list"></div>
+        </div>
+        <div id="log-section">
+          <p class="preview-label">Send Log</p>
+          <div id="log-list"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /.page-wrap -->
+
+  <script src="scripts/fileHandler.js"></script>
+  <script src="scripts/dateUtils.js"></script>
+  <script src="scripts/templateParser.js"></script>
+  <script src="scripts/emailSender.js"></script>
+  <script src="scripts/app.js"></script>
+</body>
+</html>
