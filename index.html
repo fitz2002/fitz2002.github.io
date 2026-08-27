@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Confirm Email Updater</title>
+  <title>Confirm Updater</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/styles.css">
@@ -12,14 +12,14 @@
 <body>
 
   <header>
-    <div class="brand">Backroads <span>Email Updater</span></div>
+    <div class="brand">Backroads <span>Confirm Updater</span></div>
     <img class="brand" style="height: 2.5vw;" src="./resources/brds_logo.png" alt="Logo">
   </header>
 
   <div class="page-wrap">
     <h1 class="page-title">Confirm Email Template Updater</h1>
     <p class="page-subtitle">Upload a template, fill in trip details, and send personalized emails in one click.</p>
-    <p class="page-subtitle">See a guide on how to use <a href="https://claude.ai/code/artifact/1dcd122b-1c88-4e4c-b908-02ac91d93635" target="_blank" rel="noopener">here.</a></p>
+    <p class="page-subtitle">See a guide on how to use <a href="./confirm-updater-howto/" target="_blank" rel="noopener">here.</a></p>
 
     <!-- ── STEP 1: Upload Template ── -->
     <div class="card">
@@ -29,7 +29,7 @@
       </div>
       <div class="card-body">
         <div class="field">
-          <label>Template File <span class="hint">(.txt or .docx)</span></label>
+          <label>Template File <span class="hint">(.docx preferred)</span></label>
           <div class="file-drop-zone" id="drop-zone">
             <input type="file" id="file-input" accept=".txt,.docx" onchange="handleFileUpload(event)">
             <span class="file-icon">📄</span>
@@ -72,8 +72,8 @@
         </div>
         <div id="day-grid" style="padding-bottom: 10px;"></div>
         <div class="field">
-            <label>Prep Staff Name:</label>
-            <textarea class="smallInput" id="prepperName" rows="2" placeholder="Mike"></textarea>
+            <label>Prep Staff Name: <span class="required-mark">*</span></label>
+            <textarea class="smallInput" id="prepperName" rows="2" placeholder="Mike" required></textarea>
         </div>
         
       </div>
@@ -85,27 +85,33 @@
           <h2>Guest Details</h2>
       </div>
           <div class="card-body">
-            <div class="two-col">
-              <div class="field">
-                  <label>Number of Guests:</label>
-                  <textarea id="numGuest" rows="2" placeholder="0-26"></textarea>
-              </div>
+            <div class="field">
+                <label>Number of Guests: <span class="required-mark">*</span></label>
+                <textarea id="numGuest" rows="2" placeholder="0-26" required></textarea>
+            </div>
+            <div class="field">
+              <label>Dietary Restrictions </label>
+              <textarea id="dietary-input" rows="4" placeholder="Leave blank if no dietary restrictions&#10;Karen: Gluten-free&#10;Dennis: Nut allergy&#10;Helen: Vegetarian"></textarea>
+            </div>
+            <div class="field checkbox-field">
+              <label class="checkbox-label">
+                <input type="checkbox" id="kids-trip-toggle">
+                Kids Trip?
+              </label>
+            </div>
+            <div class="field-grid cols-3" id="kids-fields">
               <div class="field">
                   <label>Number of Adults:</label>
                   <textarea id="numAdult" rows="2" placeholder="0-26"></textarea>
               </div>
               <div class="field">
                   <label>Number of Kids:</label>
-                  <textarea id="numKid" rows="2" placeholder="Leave blank if no kids"></textarea>
+                  <textarea id="numKid" rows="2" placeholder="0-26"></textarea>
               </div>
               <div class="field">
                   <label>Kids Ages:</label>
                   <textarea id="kidAges" rows="2" placeholder="2, 4, 6, 8, 10, 12"></textarea>
               </div>
-            </div>
-            <div class="field">
-              <label>Dietary Restrictions </label>
-              <textarea id="dietary-input" rows="4" placeholder="Leave blank if no dietary restrictions&#10;Karen: Gluten-free&#10;Dennis: Nut allergy&#10;Helen: Vegetarian"></textarea>
             </div>
           </div>
     </div>
@@ -128,8 +134,8 @@
         </div>
         <div id="leader-fields"></div>
         <div class="field">
-          <label>Co-leader emails <span class="hint">(semicolon-separated)</span></label>
-          <textarea id="cc-input" rows="2" placeholder="leader@backroads.com; guide@backroads.com"></textarea>
+          <label>Co-leader emails <span class="hint">(semicolon-separated)</span> <span class="required-mark">*</span></label>
+          <textarea id="cc-input" rows="2" placeholder="leader@backroads.com; guide@backroads.com" required></textarea>
         </div>
       </div> 
     </div>

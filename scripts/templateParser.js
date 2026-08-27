@@ -207,10 +207,10 @@ function parseEmailBlock(block, emailNumber) {
 
   // Flag anything that still looks like a placeholder so it never
   // silently goes out to a vendor (e.g. a typo'd [D2DATE] in the doc).
-  const unresolvedPlaceholders = [
+  const unresolvedPlaceholders = [...new Set([
     ...findUnresolvedPlaceholders(body),
     ...findUnresolvedPlaceholders(resolvedSubject),
-  ];
+  ])];
 
   return {
     emailNumber,

@@ -37,10 +37,11 @@ function createLeaderFieldPair(leaderNumber, prevValues) {
   const nameField = document.createElement('div');
   nameField.className = 'field';
   const nameLabel = document.createElement('label');
-  nameLabel.textContent = `Leader ${leaderNumber} Name`;
+  nameLabel.innerHTML = `Leader ${leaderNumber} Name <span class="required-mark">*</span>`;
   const nameInput = document.createElement('textarea');
   nameInput.id = `leader${leaderNumber}Name`;
   nameInput.rows = 1;
+  nameInput.required = true;
   nameInput.placeholder = LEADER_PLACEHOLDER_NAMES[leaderNumber - 1] || 'Leader name';
   nameInput.value = prevValues[nameInput.id] || '';
   nameField.appendChild(nameLabel);
@@ -49,10 +50,11 @@ function createLeaderFieldPair(leaderNumber, prevValues) {
   const numField = document.createElement('div');
   numField.className = 'field';
   const numLabel = document.createElement('label');
-  numLabel.textContent = `Leader ${leaderNumber} Number`;
+  numLabel.innerHTML = `Leader ${leaderNumber} Number <span class="required-mark">*</span>`;
   const numInput = document.createElement('textarea');
   numInput.id = `leader${leaderNumber}Num`;
   numInput.rows = 1;
+  numInput.required = true;
   numInput.placeholder = '(xxx) xxx-xxxx';
   numInput.value = prevValues[numInput.id] || '';
   numField.appendChild(numLabel);
@@ -90,10 +92,11 @@ function createHotelField(hotelNumber, prevValues) {
   const field = document.createElement('div');
   field.className = 'field';
   const label = document.createElement('label');
-  label.textContent = `Number of Rooms Hotel ${hotelNumber}`;
+  label.innerHTML = `Number of Rooms Hotel ${hotelNumber} <span class="required-mark">*</span>`;
   const input = document.createElement('textarea');
   input.id = `hotel${hotelNumber}Rooms`;
   input.rows = 1;
+  input.required = true;
   input.placeholder = '...';
   input.value = prevValues[input.id] || '';
   field.appendChild(label);
@@ -107,7 +110,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('numHotels').addEventListener('change', buildHotelFields);
   buildHotelFields();
+
+  // ── "Kids Trip?" toggle — Number of Adults / Number of Kids / Kids
+  // Ages stay hidden until this is checked (unchecked by default) ──
+  const kidsToggle = document.getElementById('kids-trip-toggle');
+  const kidsFields = document.getElementById('kids-fields');
+  const syncKidsFields = () => kidsFields.classList.toggle('visible', kidsToggle.checked);
+  kidsToggle.addEventListener('change', syncKidsFields);
+  syncKidsFields();
 });
+
+// ── Required-field validation ──
+// Every field marked with the `required` attribute (Prep Staff Name,
+// Number of Guests, Co-leader emails, plus each currently-rendered
+// Leader Name/Number and Hotel Rooms field) must be filled in before
+// emails can be processed & sent. Uses one delegated listener so newly
+// created leader/hotel fields are covered automatically.
+document.addEventListener('input', (e) => {
+  if (e.target.required && e.target.value.trim()) {
+    e.target.classList.remove('field-invalid');
+  }
+});
+
+function validateRequiredFields() {
+  const invalid = [];
+  document.querySelectorAll('[required]').forEach(el => {
+    const empty = !el.value.trim();
+    el.classList.toggle('field-invalid', empty);
+    if (empty) invalid.push(el);
+  });
+  return invalid;
+}
+
+// ── Returns the list of blocking issues for an email in its current
+// state (empty array once everything's resolved, or if it's been
+// removed from the batch). Shared by the initial parse-time log pass
+// and the Edit/Delete/Undo handlers so the log can report exactly
+// what changed as issues are fixed. ──
+function getEmailIssues(email) {
+  if (email.deleted) return [];
+  const issues = [];
+  if (!email.recipients.length) issues.push('no To: recipients found');
+  if (email.unresolvedPlaceholders.length) {
+    issues.push(`unresolved placeholder(s) ${email.unresolvedPlaceholders.join(', ')}`);
+  }
+  return issues;
+}
 
 // ── Main workflow: parse template → preview → send ──
 async function processAndSend() {
@@ -118,6 +166,14 @@ async function processAndSend() {
     return;
   }
 
+  const invalidFields = validateRequiredFields();
+  if (invalidFields.length) {
+    addLog('error', `Please fill in all required fields (marked *) before sending — ${invalidFields.length} field(s) still empty.`);
+    invalidFields[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    invalidFields[0].focus();
+    return;
+  }
+
   const sendBtn = document.getElementById('send-btn');
   sendBtn.disabled = true;
   sendBtn.innerHTML = '<span class="btn-icon">⏳</span> Processing…';
@@ -125,7 +181,7 @@ async function processAndSend() {
   try {
     const token = document.getElementById('access-token')?.value.trim() || '';
     if (!token) {
-      addLog('warn', 'No access token — will preview emails but NOT send. Authenticate in Step 1 to send.');
+      addLog('warn', 'No access token — will preview emails but NOT send. Authenticate in Step 6 to send.');
     }
 
     addLog('info', 'Parsing template…');
@@ -133,9 +189,9 @@ async function processAndSend() {
     addLog('info', `Found ${emails.length} email(s) in template.`);
 
     emails.forEach(email => {
-      if (email.unresolvedPlaceholders.length) {
-        addLog('warn', `Email ${email.emailNumber}: unresolved placeholder(s) ${email.unresolvedPlaceholders.join(', ')} — check the source template for typos.`);
-      }
+      getEmailIssues(email).forEach(issue => {
+        addLog('warn', `Email ${email.emailNumber}: ${issue}.`);
+      });
     });
 
     const statusEls = renderEmailCards(emails);
@@ -295,6 +351,10 @@ function renderEmailCards(emails) {
     editBtn.addEventListener('click', () => {
       if (card.classList.contains('deleted')) return;
 
+      // Snapshot of issues as of opening the editor, so Save can log
+      // exactly what this edit resolved or introduced.
+      const issuesBeforeEdit = getEmailIssues(email);
+
       // Build the edit form
       const form = document.createElement('div');
       form.className = 'email-edit-form';
@@ -367,10 +427,21 @@ function renderEmailCards(emails) {
         email.body       = bodyTextarea.value;
         // Re-check for leftover placeholder syntax since manual edits
         // could introduce or resolve one.
-        email.unresolvedPlaceholders = [
+        email.unresolvedPlaceholders = [...new Set([
           ...findUnresolvedPlaceholders(email.body),
           ...findUnresolvedPlaceholders(email.subject),
-        ];
+        ])];
+
+        // Log exactly what this edit changed, so the send log reflects
+        // issues as they're resolved instead of staying stuck at the
+        // state from the initial parse.
+        const issuesAfterEdit = getEmailIssues(email);
+        issuesBeforeEdit
+          .filter(issue => !issuesAfterEdit.includes(issue))
+          .forEach(issue => addLog('success', `Email ${email.emailNumber}: resolved — ${issue}.`));
+        issuesAfterEdit
+          .filter(issue => !issuesBeforeEdit.includes(issue))
+          .forEach(issue => addLog('warn', `Email ${email.emailNumber}: ${issue}.`));
 
         refreshHeadSummary();
         refreshBodyDisplay();
@@ -394,10 +465,15 @@ function renderEmailCards(emails) {
 
     // ── Delete button logic ──
     deleteBtn.addEventListener('click', () => {
+      const issuesAtDelete = getEmailIssues(email);
       email.deleted = true;
       card.classList.add('deleted');
       statusSpan.className   = 'email-send-status status-failed';
       statusSpan.textContent = 'Removed';
+
+      addLog('info', issuesAtDelete.length
+        ? `Email ${email.emailNumber} removed from batch (no longer blocked by: ${issuesAtDelete.join('; ')}).`
+        : `Email ${email.emailNumber} removed from batch.`);
 
       // Replace action buttons with an Undo option
       actions.innerHTML = '';
@@ -411,6 +487,10 @@ function renderEmailCards(emails) {
         card.classList.remove('deleted');
         statusSpan.className   = 'email-send-status status-pending';
         statusSpan.textContent = 'Pending';
+
+        addLog('info', `Email ${email.emailNumber} restored to batch.`);
+        // Re-surface any issues that still apply now that it's back in.
+        getEmailIssues(email).forEach(issue => addLog('warn', `Email ${email.emailNumber}: ${issue}.`));
 
         actions.innerHTML = '';
         actions.appendChild(editBtn);

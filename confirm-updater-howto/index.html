@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Email Updater Guide</title>
+<meta name="description" content="A plain-language, step-by-step walkthrough for Backroads prep staff using the Confirm Email Template Updater.">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/x-icon" href="../resources/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="masthead">
+  <svg class="trail" viewBox="0 0 340 220" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M0 190 L60 130 L100 165 L150 90 L190 140 L340 30" stroke="#4cb3cc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>
+    <path d="M0 210 Q90 150 170 185 T340 120" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.35"/>
+    <circle cx="340" cy="30" r="4" fill="#ffffff" opacity="0.6"/>
+  </svg>
+  <div class="masthead-inner">
+    <div class="eyebrow"><span class="rule"></span> Backroads &nbsp;·&nbsp; Trip Prep Staff Guide</div>
+    <h1>How to use the Email&nbsp;Updater</h1>
+    <p class="lede">A plain-language walkthrough for turning a trip confirmation template into personalized emails and sending them to every vendor — in one pass, without typing each one by hand.</p>
+  </div>
+</header>
+
+<div class="layout">
+
+  <nav class="rail" aria-label="On this page">
+    <div class="rail-title">On this page</div>
+    <ol>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#before">Before you start</a></li>
+      <li class="rail-divider"></li>
+      <li><a href="#step1">1 · Upload template</a></li>
+      <li><a href="#step2">2 · Trip details</a></li>
+      <li><a href="#step3">3 · Guest details</a></li>
+      <li><a href="#step4">4 · Leader details</a></li>
+      <li><a href="#step5">5 · Hotel details</a></li>
+      <li><a href="#step6">6 · Sign in</a></li>
+      <li><a href="#step7">7 · Review &amp; send</a></li>
+      <li class="rail-divider"></li>
+      <li><a href="#trouble">If something looks wrong</a></li>
+      <li><a href="#faq">Quick answers</a></li>
+    </ol>
+  </nav>
+
+  <main class="main">
+
+    <details class="mobile-toc">
+      <summary>On this page</summary>
+      <ul>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#before">Before you start</a></li>
+        <li><a href="#step1">1 · Upload template</a></li>
+        <li><a href="#step2">2 · Trip details</a></li>
+        <li><a href="#step3">3 · Guest details</a></li>
+        <li><a href="#step4">4 · Leader details</a></li>
+        <li><a href="#step5">5 · Hotel details</a></li>
+        <li><a href="#step6">6 · Sign in</a></li>
+        <li><a href="#step7">7 · Review &amp; send</a></li>
+        <li><a href="#trouble">If something looks wrong</a></li>
+        <li><a href="#faq">Quick answers</a></li>
+      </ul>
+    </details>
+
+    <section id="overview">
+      <span class="section-kicker">What this tool does</span>
+      <h2>One form, every vendor email, one click</h2>
+      <p>Every trip has a confirmation template — a Word document your Trip Expert (TE) builds, with one section per vendor (hotels, restaurants, activity providers) and short codes like <span class="field-tag">[D1_DATE]</span> or <span class="field-tag">[NUM_GUESTS]</span> standing in for real information. Normally, prep day means opening that document and manually swapping every code for the real value, in every section, for every vendor, before copying each email into Outlook by hand.</p>
+      <p>The Email Updater does that swap for you. You upload the template once, fill in the trip's details in a short form, and the tool builds every vendor email automatically — then sends all of them through your own Outlook account with one click.</p>
+      <div class="checklist">
+        <ul>
+          <li><strong>You don't edit the template.</strong> The codes and vendor sections are already set up by your TE — you just fill in a form.</li>
+          <li><strong>You always get to preview first.</strong> Every email is shown to you before anything sends, and you can edit or skip individual ones.</li>
+          <li><strong>It sends as you</strong>, through your own Microsoft/Outlook sign-in — recipients see it come from your real email address, and a copy lands in your Sent Items, same as if you'd typed it yourself.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="before">
+      <span class="section-kicker">Before you start</span>
+      <h2>Have these ready</h2>
+      <p>Gather these first so you're not hunting for information halfway through the form.</p>
+      <div class="checklist">
+        <ul>
+          <li><strong>The trip's confirmation template</strong> — the <span class="field-tag">.docx</span> file from your TE (the "Standardized Prep Day Confirmation Template"). A <span class="field-tag">.txt</span> file works too, if that's what you were given.</li>
+          <li><strong>Your Backroads Microsoft 365 login</strong> — the same one you use for Outlook.</li>
+          <li><strong>The guest backgrounder</strong> — for dietary restrictions and any special room requests.</li>
+          <li><strong>Guest and leader counts</strong> — total guests, adults, kids and their ages, number of leaders, and leader phone numbers.</li>
+          <li><strong>Hotel room counts</strong> — how many rooms are booked at each property.</li>
+          <li><strong>Pop-ups allowed</strong> for this page — signing in opens a small Microsoft window, and a pop-up blocker will silently stop it.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="step1">
+      <span class="section-kicker">Step 1</span>
+      <h2>Upload the email template</h2>
+      <div class="step-card">
+        <div class="step-card-head"><span class="num">1</span><h3>Upload Email Template</h3></div>
+        <div class="step-card-body">
+          <p>Click the upload box (or drag the file onto it) and choose the template your TE gave you. Once it loads, a preview of the raw text appears underneath — that's just to confirm the right file loaded; you don't need to read through it.</p>
+          <p>You won't need to touch the vendor sections, the <span class="field-tag">TO:</span> / <span class="field-tag">Subject:</span> / <span class="field-tag">EMAIL BODY:</span> labels, or any of the bracketed codes inside the document. The form in the rest of this guide fills those in for you.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="step2">
+      <span class="section-kicker">Step 2</span>
+      <h2>Trip details</h2>
+      <div class="step-card">
+        <div class="step-card-head"><span class="num">2</span><h3>Trip Details</h3></div>
+        <div class="step-card-body">
+          <p><span class="mock-field-label">Number of Trip Days</span> — how many days this template covers (check the Vendor Checklist in the document for the highest "Day" listed, e.g. D1–D6).</p>
+          <p><span class="mock-field-label">Prep Day Date</span> — today's date, the day you're doing this prep work (Day 0). The guests' first day, D1, is automatically calculated as the day after it, and every later day fills in underneath from there — you never need to calculate or type those by hand.</p>
+          <p><span class="mock-field-label">Prep Staff Name</span> — your name. It signs off every email the tool generates.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="step3">
+      <span class="section-kicker">Step 3</span>
+      <h2>Guest details</h2>
+      <div class="step-card">
+        <div class="step-card-head"><span class="num">3</span><h3>Guest Details</h3></div>
+        <div class="step-card-body">
+          <p><span class="mock-field-label">Number of Guests</span> — the total headcount for the trip. This field is required; you won't be able to send until it's filled in.</p>
+          <p><span class="mock-field-label">Dietary Restrictions</span> — one guest per line, pulled from the guest backgrounder, e.g.:</p>
+          <p class="mono" style="font-size:13px;color:var(--muted);">Karen: Gluten-free<br>Dennis: Nut allergy<br>Helen: Vegetarian</p>
+          <p>If there are none, leave it blank — the emails will say so automatically instead of showing an empty line.</p>
+          <div class="mock-row">
+            <span class="field-tag">☐ Kids Trip?</span>
+          </div>
+          <p>Check <span class="mock-field-label">Kids Trip?</span> only if kids are coming along. Checking it reveals three more fields right underneath: <span class="mock-field-label">Number of Adults</span>, <span class="mock-field-label">Number of Kids</span>, and <span class="mock-field-label">Kids Ages</span> — fill those in once they appear.</p>
+          <div class="callout tip">
+            <strong class="label">All-adult trip? Leave it unchecked</strong>
+            The checkbox is off by default. For a trip with no one under 18, skip it — the Adults, Kids, and Kids Ages fields stay hidden and you don't need to touch them.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="step4">
+      <span class="section-kicker">Step 4</span>
+      <h2>Leader details</h2>
+      <div class="step-card">
+        <div class="step-card-head"><span class="num">4</span><h3>Leader Details</h3></div>
+        <div class="step-card-body">
+          <p>Set <span class="mock-field-label">Number of Leaders</span> and a Name + phone number field appears for each one — fill those in.</p>
+          <p><span class="mock-field-label">Co-leader emails</span> — every vendor email's CC line, semicolon-separated. Anything the template already CCs is combined with this list automatically, so you won't get duplicates.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="step5">
+      <span class="section-kicker">Step 5</span>
+      <h2>Hotel details</h2>
+      <div class="step-card">
+        <div class="step-card-head"><span class="num">5</span><h3>Hotel Details</h3></div>
+        <div class="step-card-body">
+          <p>Set <span class="mock-field-label">Number of Hotels</span> and a room-count field appears for each one, in the same order as the vendor checklist in your template.</p>
+          <p><span class="mock-field-label">Special Requests for Hotels</span> — anything from the guest backgrounder about rooming together, accessibility, or upgrades.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="step6">
+      <span class="section-kicker">Step 6</span>
+      <h2>Sign in with Microsoft</h2>
+      <div class="step-card">
+        <div class="step-card-head"><span class="num">6</span><h3>Microsoft Outlook Authentication</h3></div>
+        <div class="step-card-body">
+          <p>This is the last thing you do before sending — it's how the tool is allowed to send email as you. Once the rest of the form looks right, click the button near the bottom of the page:</p>
+          <div class="mock-row">
+            <span class="mock-btn">🔑 Sign in with Microsoft</span>
+            <span class="mock-pill off"><span class="dot"></span>Not authenticated</span>
+          </div>
+          <p>A small Microsoft window pops up. Choose your Backroads account, sign in as you normally would, and the window closes itself. The status pill on the page changes to confirm it worked:</p>
+          <div class="mock-row">
+            <span class="mock-pill on"><span class="dot"></span>Authenticated</span>
+          </div>
+          <div class="callout tip">
+            <strong class="label">Why this comes last</strong>
+            Everything above (Steps 1–5) is safe to fill in, fix, and re-check freely — nothing sends yet. This step is deliberately placed right before Review &amp; Send, because signing in is the last thing standing between you and actually emailing vendors. See "Preview before you sign in" in Step 7.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="step7">
+      <span class="section-kicker">Step 7</span>
+      <h2>Review &amp; send</h2>
+      <div class="step-card">
+        <div class="step-card-head"><span class="num">7</span><h3>Review &amp; Send</h3></div>
+        <div class="step-card-body">
+          <p>When every field above is filled in, click:</p>
+          <div class="mock-row"><span class="mock-btn big">✉️ Process &amp; Send All Emails</span></div>
+
+          <div class="callout warn">
+            <strong class="label">Preview before you sign in</strong>
+            As long as you haven't completed Step 6 (Sign in with Microsoft) yet, this button only builds a <em>preview</em> — it shows you every email exactly as it would be sent, but sends nothing. Use this to catch mistakes safely. Once you <em>are</em> signed in, the same button sends immediately — there's no separate "are you sure" step, so only sign in once the preview looks right.
+          </div>
+
+          <p>Each vendor becomes its own card, showing who it's going to, the subject line, and the full message. Two buttons sit on every card:</p>
+          <ul>
+            <li><strong>✏️ Edit</strong> — opens the subject, recipients, CC, and body so you can fix anything by hand, then Save.</li>
+            <li><strong>🗑 Delete</strong> — marks that one email as skipped (with an Undo, in case you change your mind). Use this for a vendor that doesn't need an email this trip.</li>
+          </ul>
+
+          <div class="callout danger">
+            <strong class="label">Red warning on a card</strong>
+            A red line reading "Unresolved placeholder(s)" means a code like <span class="field-tag">[D2_DATE]</span> is still showing instead of a real value — almost always because a field back in Steps 2–5 was left blank, or there's a typo in the template itself. That email is automatically held back and will <strong>not</strong> send until it's fixed. Go back and fill in the missing field, then click Process &amp; Send again — or use Edit to fix the text directly.
+          </div>
+
+          <div class="callout warn">
+            <strong class="label">Clicking the button again resets the preview</strong>
+            Each click rebuilds all the cards from scratch, using whatever is currently in the form. Any per-email Edits or Deletes you made get wiped out. So make your edits right before you're ready to actually send — not several clicks earlier.
+          </div>
+
+          <p>Once sending starts, each card's status updates as it goes:</p>
+          <div class="legend">
+            <span class="legend-chip pending">Pending</span>
+            <span class="legend-chip sent">Sent</span>
+            <span class="legend-chip failed">Failed / Blocked</span>
+            <span class="legend-chip removed">Removed</span>
+          </div>
+          <p>A running <strong>Send Log</strong> underneath narrates everything as it happens — how many emails were found, which were skipped and why, and a final tally of how many sent successfully. A copy of every sent email also lands in your own Outlook Sent Items, exactly like sending it yourself.</p>
+
+          <div class="callout danger">
+            <strong class="label">Attachments aren't automatic</strong>
+            If a vendor section mentions an attachment (a rooming list, for example), the tool does not attach it — it only sends the text of the email. Check each template's notes for "Attach rooming list" and send those separately in Outlook, or add them after opening the message from your Sent Items.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="trouble">
+      <span class="section-kicker">Troubleshooting</span>
+      <h2>If something looks wrong</h2>
+
+      <div class="faq-item">
+        <p class="faq-q">A card is red and says "Unresolved placeholder(s)"</p>
+        <p class="faq-a">A bracketed code didn't get replaced. Check the matching field in Steps 2–5 is filled in — the warning names the exact code, e.g. <span class="field-tag">[D3_DATE]</span> points back to Trip Details, <span class="field-tag">[LEADER_2_PHONE]</span> to Leader Details. If the field is filled in and it's still unresolved, the template likely has a typo — flag it to your TE.</p>
+      </div>
+
+      <div class="faq-item">
+        <p class="faq-q">A card says "No To: recipients found"</p>
+        <p class="faq-a">The vendor's section in the template is missing a valid <span class="field-tag">TO:</span> line, or the addresses aren't formatted as real emails. Use Edit to type the correct address in directly, or fix it in the source document and re-upload.</p>
+      </div>
+
+      <div class="faq-item">
+        <p class="faq-q">The Microsoft sign-in window won't finish, or nothing happens when I click it</p>
+        <p class="faq-a">Check your browser isn't blocking the pop-up — look for a blocked-popup icon in the address bar and allow it for this page, then try again. Make sure you're picking your real Backroads account in the picker, not a personal one.</p>
+      </div>
+
+      <div class="faq-item">
+        <p class="faq-q">Some emails failed partway through with an authentication error</p>
+        <p class="faq-a">Your sign-in can time out on a long prep session. Note which vendors show "Failed" or "Sent" in the Send Log before doing anything else. Go back to Step 6 and sign in again — but re-clicking Process &amp; Send All Emails rebuilds every card from scratch and will try to resend the ones that already succeeded too. Before clicking it again, click Delete on any card the log already marked "Sent" so vendors don't get a duplicate email, then send the rest.</p>
+      </div>
+
+      <div class="faq-item">
+        <p class="faq-q">I uploaded the file but nothing shows up</p>
+        <p class="faq-a">Only <span class="field-tag">.docx</span> and <span class="field-tag">.txt</span> files are supported — an older <span class="field-tag">.doc</span> file needs to be re-saved as <span class="field-tag">.docx</span> in Word first (File → Save As → Word Document).</p>
+      </div>
+    </section>
+
+    <section id="faq">
+      <span class="section-kicker">Quick answers</span>
+      <h2>Frequently asked questions</h2>
+
+      <div class="faq-item">
+        <p class="faq-q">Do I need to edit the Word document at all?</p>
+        <p class="faq-a">No. Your TE sets up the vendor sections and placeholder codes when the template is built. Your job is just filling out the form on this page — the tool handles every substitution.</p>
+      </div>
+
+      <div class="faq-item">
+        <p class="faq-q">Who do the emails come from?</p>
+        <p class="faq-a">You. Sending happens through your own signed-in Outlook account, so vendors see your real name and address, and replies land in your normal inbox.</p>
+      </div>
+
+      <div class="faq-item">
+        <p class="faq-q">Can I stop a vendor from getting an email without editing the template?</p>
+        <p class="faq-a">Yes — click Delete on that vendor's card during the preview, before you send. It's marked Removed and skipped; Undo brings it back if needed.</p>
+      </div>
+
+      <div class="faq-item">
+        <p class="faq-q">What happens to the emails after they're sent?</p>
+        <p class="faq-a">Each one is saved to your Outlook Sent Items automatically, just as if you'd sent it by hand — that's your record for the trip.</p>
+      </div>
+
+      <div class="faq-item">
+        <p class="faq-q">Is it safe to click Process &amp; Send All Emails more than once before I've signed in?</p>
+        <p class="faq-a">Yes — while you're not signed in, it only ever previews and never sends. Click it as many times as you need while you're still fixing fields.</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer>Backroads &nbsp;·&nbsp; Email Updater — internal prep staff guide</footer>
+</body>
+</html>
