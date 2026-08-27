@@ -120,7 +120,7 @@ header img.brand {
 }
 
 .card-header {
-  background: linear-gradient(90deg, var(--teal-dark), #005a6e);
+  background: linear-gradient(90deg, var(--teal-dark), var(--teal-mid));
   padding: 14px 24px;
   display: flex;
   align-items: center;
@@ -391,7 +391,8 @@ button {
   font-size: 14px;
   font-family: 'DM Sans', sans-serif;
   font-weight: 600;
-  background: linear-gradient(135deg, var(--teal-dark), var(--teal-mid));
+  background: linear-gradient(90deg, var(--teal-mid), var(--teal-light));
+  /* background: radial-gradient(circle, var(--teal-mid), var(--teal-light));; */
   color: var(--white);
   border: none;
   border-radius: var(--radius);
