@@ -52,6 +52,14 @@ header {
 header .brand:first-child {
   grid-column: 2;
   text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.brand-logo {
+  height: 26px;
+  width: auto;
+  display: block;
 }
 
 /* Right column: the logo, pushed to the right */
@@ -709,6 +717,7 @@ button:disabled {
     max-width: 38vw;
   }
   .brand { font-size: 20px; white-space: normal; }
+  .brand-logo { height: 18px; }
 
   .page-wrap   { padding: 28px 18px 60px; }
   .card-header { padding: 12px 18px; }
@@ -744,6 +753,7 @@ button:disabled {
 /* Small phone */
 @media (max-width: 400px) {
   .brand           { font-size: 16px; }
+  .brand-logo      { height: 15px; }
   header img.brand { height: 22px !important; }
   #day-grid        { grid-template-columns: 1fr; }
 }
