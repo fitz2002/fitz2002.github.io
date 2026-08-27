@@ -82,15 +82,39 @@ function onTokenPasted() {
   }
 }
 
+// ── Reads a File as base64 for the Graph API's fileAttachment format ──
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result.split(',')[1]); // strip the "data:...;base64," prefix
+    reader.onerror = () => reject(new Error(`Failed to read attachment "${file.name}"`));
+    reader.readAsDataURL(file);
+  });
+}
+
 // ── Sends one email via Microsoft Graph API ──
-// Returns true on success, throws an Error on failure
-async function sendEmail(recipients, cc, subject, bodyText, token) {
+// `attachments` is an array of { label, file } — only entries with a
+// real File attached are sent. Returns true on success, throws an
+// Error on failure.
+async function sendEmail(recipients, cc, subject, bodyText, token, attachments = []) {
+  const filesToSend = attachments.filter(a => a.file);
+
+  // Graph's sendMail accepts small attachments inline as base64; larger
+  // files (~3MB+) would need an upload session instead, but rooming
+  // lists and similar prep-day docs are well under that in practice.
+  const graphAttachments = await Promise.all(filesToSend.map(async (a) => ({
+    '@odata.type': '#microsoft.graph.fileAttachment',
+    name: a.file.name,
+    contentBytes: await fileToBase64(a.file),
+  })));
+
   const payload = {
     message: {
       subject:      subject,
       body:         { contentType: 'Text', content: bodyText },
       toRecipients: recipients.map(addr => ({ emailAddress: { address: addr } })),
       ccRecipients: cc.map(addr => ({ emailAddress: { address: addr } })),
+      ...(graphAttachments.length ? { attachments: graphAttachments } : {}),
     },
     saveToSentItems: true,
   };

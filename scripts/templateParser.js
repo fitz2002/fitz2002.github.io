@@ -15,6 +15,10 @@
      Subject:    →  Email subject line
      CC:         →  Template CC list (e.g. [COLEADER_EMAILS]) —
                      merged with the user-entered CC field
+     Attachments: →  Comma/semicolon-separated list of files this
+                     vendor needs (e.g. "Rooming List") — the preview
+                     prompts for each one and blocks sending until
+                     it's been attached, so it can't be forgotten.
      EMAIL BODY: →  Everything below this line becomes the
                      email body. Blocks with no TO: line are
                      treated as non-email front matter (cover
@@ -192,6 +196,19 @@ function parseEmailBlock(block, emailNumber) {
     .split(/[;,]+/).map(e => e.trim()).filter(Boolean);
   const allCC = [...new Set([...templateCC, ...userCC])];  // deduplicate
 
+  // ── Step 3b: Extract Attachments: — a comma/semicolon-separated list
+  // of files this vendor needs (e.g. "Attachments: Rooming List"). Each
+  // one becomes a slot the preview prompts for and blocks sending on
+  // until a file is actually attached.
+  const attachmentsMatch = block.match(/^Attachments:\s*(.+)$/mi);
+  const attachments = attachmentsMatch
+    ? applySubstitutions(attachmentsMatch[1].trim())
+        .split(/[;,]+/)
+        .map(label => label.trim())
+        .filter(Boolean)
+        .map(label => ({ label, file: null }))
+    : [];
+
   // ── Step 4: Extract body — everything after the 'EMAIL BODY:' line.
   // If no EMAIL BODY: tag exists, use the whole block as the body.
   let body = block;
@@ -219,5 +236,6 @@ function parseEmailBlock(block, emailNumber) {
     subject: resolvedSubject,
     body,
     unresolvedPlaceholders,
+    attachments,
   };
 }

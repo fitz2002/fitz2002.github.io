@@ -154,6 +154,10 @@ function getEmailIssues(email) {
   if (email.unresolvedPlaceholders.length) {
     issues.push(`unresolved placeholder(s) ${email.unresolvedPlaceholders.join(', ')}`);
   }
+  const missingAttachments = (email.attachments || []).filter(a => !a.file);
+  if (missingAttachments.length) {
+    issues.push(`missing attachment(s): ${missingAttachments.map(a => a.label).join(', ')}`);
+  }
   return issues;
 }
 
@@ -228,10 +232,18 @@ async function processAndSend() {
         continue;
       }
 
+      const missingAttachments = (email.attachments || []).filter(a => !a.file);
+      if (missingAttachments.length) {
+        addLog('error', `Email ${email.emailNumber}: missing attachment(s) ${missingAttachments.map(a => a.label).join(', ')} — skipped, not sent to vendor.`);
+        setEmailStatus(statusEls[i], 'failed', 'Blocked');
+        failCount++;
+        continue;
+      }
+
       addLog('info', `Sending email ${email.emailNumber} → ${email.recipients.join(', ')}…`);
 
       try {
-        await sendEmail(email.recipients, email.cc, email.subject, email.body, token);
+        await sendEmail(email.recipients, email.cc, email.subject, email.body, token, email.attachments);
         addLog('success', `✓ Email ${email.emailNumber} sent to ${email.recipients.join(', ')}`);
         setEmailStatus(statusEls[i], 'sent', 'Sent');
         successCount++;
@@ -280,6 +292,63 @@ function buildHeadSummaryHTML(email) {
       </span>
       <span class="email-num">Email ${email.emailNumber}</span>
     `;
+}
+
+// ── Builds the "attachments needed" prompt for one email card, with a
+// file input per item from its "Attachments:" line (e.g. "Rooming
+// List"). Sending is blocked (see getEmailIssues) until every slot has
+// a file, so a required attachment can't get forgotten. ──
+function buildAttachmentsSection(email) {
+  const section = document.createElement('div');
+  section.className = 'attachments-prompt';
+
+  const title = document.createElement('div');
+  title.className = 'attachments-prompt-title';
+  title.textContent = '📎 Attachments needed';
+  section.appendChild(title);
+
+  email.attachments.forEach(attachment => {
+    const slot = document.createElement('div');
+    slot.className = 'attachment-slot';
+
+    const label = document.createElement('label');
+    label.textContent = attachment.label;
+
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+
+    const status = document.createElement('span');
+    status.className = 'attachment-status';
+
+    const refreshSlotStatus = () => {
+      slot.classList.toggle('attached', !!attachment.file);
+      status.textContent = attachment.file ? `✓ ${attachment.file.name}` : 'Not attached';
+    };
+    refreshSlotStatus();
+
+    fileInput.addEventListener('change', () => {
+      const issuesBefore = getEmailIssues(email);
+      attachment.file = fileInput.files[0] || null;
+      refreshSlotStatus();
+
+      // Log exactly what changed, same as the Edit/Save flow, so the
+      // send log reflects attachments as they're actually provided.
+      const issuesAfter = getEmailIssues(email);
+      issuesBefore
+        .filter(issue => !issuesAfter.includes(issue))
+        .forEach(issue => addLog('success', `Email ${email.emailNumber}: resolved — ${issue}.`));
+      issuesAfter
+        .filter(issue => !issuesBefore.includes(issue))
+        .forEach(issue => addLog('warn', `Email ${email.emailNumber}: ${issue}.`));
+    });
+
+    slot.appendChild(label);
+    slot.appendChild(fileInput);
+    slot.appendChild(status);
+    section.appendChild(slot);
+  });
+
+  return section;
 }
 
 // ── Renders an email preview card for each parsed email ──
@@ -332,6 +401,9 @@ function renderEmailCards(emails) {
     const card = document.createElement('div');
     card.className = 'email-card';
     card.appendChild(head);
+    if (email.attachments && email.attachments.length) {
+      card.appendChild(buildAttachmentsSection(email));
+    }
     card.appendChild(bodyDiv);
     emailsList.appendChild(card);
 
