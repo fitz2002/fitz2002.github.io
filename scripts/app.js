@@ -161,11 +161,21 @@ function getEmailIssues(email) {
   return issues;
 }
 
+// ── Tracks the currently-rendered email batch. Re-clicking "Process &
+// Send" (e.g. to actually send after authenticating following an
+// earlier preview) reuses this SAME batch — with any edits, deletions,
+// and attached files intact — instead of silently re-parsing the raw
+// template from scratch and discarding them. A fresh parse only
+// happens the first time, or after the uploaded template changes. ──
+let currentEmails = null;
+let currentStatusEls = null;
+let currentEmailsSourceText = null;
+
 // ── Main workflow: parse template → preview → send ──
 async function processAndSend() {
-  clearUI();
-
   if (!templateText) {
+    clearUI();
+    currentEmails = currentStatusEls = currentEmailsSourceText = null;
     addLog('error', 'No template loaded. Please upload a template file first.');
     return;
   }
@@ -183,22 +193,39 @@ async function processAndSend() {
   sendBtn.innerHTML = '<span class="btn-icon">⏳</span> Processing…';
 
   try {
+    // Presence of a token here just decides preview-only vs. send;
+    // sendEmail refreshes/validates the token itself before each send.
     const token = document.getElementById('access-token')?.value.trim() || '';
-    if (!token) {
-      addLog('warn', 'No access token — will preview emails but NOT send. Authenticate in Step 6 to send.');
-    }
 
-    addLog('info', 'Parsing template…');
-    const emails = parseEmails(templateText);
-    addLog('info', `Found ${emails.length} email(s) in template.`);
+    let emails, statusEls;
 
-    emails.forEach(email => {
-      getEmailIssues(email).forEach(issue => {
-        addLog('warn', `Email ${email.emailNumber}: ${issue}.`);
+    if (currentEmails && currentEmailsSourceText === templateText) {
+      // Same template as last time — reuse the batch already on
+      // screen so edits/deletions/attachments made in the preview
+      // actually make it through to sending.
+      emails = currentEmails;
+      statusEls = currentStatusEls;
+    } else {
+      clearUI();
+      if (!token) {
+        addLog('warn', 'No access token — will preview emails but NOT send. Authenticate in Step 6 to send.');
+      }
+
+      addLog('info', 'Parsing template…');
+      emails = parseEmails(templateText);
+      addLog('info', `Found ${emails.length} email(s) in template.`);
+
+      emails.forEach(email => {
+        getEmailIssues(email).forEach(issue => {
+          addLog('warn', `Email ${email.emailNumber}: ${issue}.`);
+        });
       });
-    });
 
-    const statusEls = renderEmailCards(emails);
+      statusEls = renderEmailCards(emails);
+      currentEmails = emails;
+      currentStatusEls = statusEls;
+      currentEmailsSourceText = templateText;
+    }
 
     if (!token) {
       addLog('warn', 'Preview complete. No emails sent (not authenticated).');
@@ -243,7 +270,7 @@ async function processAndSend() {
       addLog('info', `Sending email ${email.emailNumber} → ${email.recipients.join(', ')}…`);
 
       try {
-        await sendEmail(email.recipients, email.cc, email.subject, email.body, token, email.attachments);
+        await sendEmail(email.recipients, email.cc, email.subject, email.body, null, email.attachments);
         addLog('success', `✓ Email ${email.emailNumber} sent to ${email.recipients.join(', ')}`);
         setEmailStatus(statusEls[i], 'sent', 'Sent');
         successCount++;

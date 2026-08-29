@@ -199,13 +199,15 @@ function parseEmailBlock(block, emailNumber) {
   // ── Step 3b: Extract Attachments: — a comma/semicolon-separated list
   // of files this vendor needs (e.g. "Attachments: Rooming List"). Each
   // one becomes a slot the preview prompts for and blocks sending on
-  // until a file is actually attached.
+  // until a file is actually attached. "None"/"none" means this vendor
+  // needs nothing attached, so no prompt should appear at all.
   const attachmentsMatch = block.match(/^Attachments:\s*(.+)$/mi);
   const attachments = attachmentsMatch
     ? applySubstitutions(attachmentsMatch[1].trim())
         .split(/[;,]+/)
         .map(label => label.trim())
         .filter(Boolean)
+        .filter(label => label.toLowerCase() !== 'none')
         .map(label => ({ label, file: null }))
     : [];
 
